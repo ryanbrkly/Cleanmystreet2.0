@@ -22,6 +22,9 @@
       </div>
       <h1>{{ p.title }}</h1>
       <p class="titlepage__where">{{ icon('pin', 18) }} {{ p.street_name }}{% if p.location %}, {{ p.location }}{% endif %}</p>
+      {% if p.status == 'funding' %}
+      <p class="deadline-line">{{ icon('clock', 18) }} <span>Funding closes <b>{{ p.deadline|nice_date }}</b>{% if p.days_left >= 0 %} ({{ 'today' if p.days_left == 0 else (p.days_left ~ ' day' ~ ('' if p.days_left == 1 else 's') ~ ' left') }}){% endif %}. If the goal isn’t reached by then, everyone is refunded in full.</span></p>
+      {% endif %}
       <div class="titlepage__phases">{{ phases(p) }}</div>
     </div>
   </div>
@@ -109,6 +112,11 @@
           </div>
 
           {% if p.is_open_for_funding %}
+          <div class="deadline-box">
+            <span>Funding deadline</span>
+            <b>{{ p.deadline|nice_date }}</b>
+            <span>Not reached by then? Everyone is refunded in full.</span>
+          </div>
           <form method="post" action="{{ url_for('public.contribute', slug=p.slug) }}" style="margin-top:22px">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <div class="hp" aria-hidden="true"><label for="hp-website">Leave this empty</label><input id="hp-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>

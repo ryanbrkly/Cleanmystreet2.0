@@ -151,7 +151,7 @@ def request_clean():
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
                 (ref, token, form["street_name"].strip(), form.get("suburb", "").strip(),
                  form["city"].strip(), form["postcode"].strip(), form["description"].strip(),
-                 form.get("service_pref", "once"), int(form.get("funding_days") or 21), photo,
+                 form.get("service_pref", "once"), int(settings.get("default_funding_days") or 21), photo,
                  form["requester_name"].strip(), form["email"].strip().lower(), form.get("phone", "").strip()),
             )
             track_url = url_for("public.track", token=token, _external=True)
@@ -172,8 +172,6 @@ REQUEST_LIMITS = {"street_name": 120, "suburb": 80, "city": 80, "postcode": 4, "
 def _clean_request_form(form):
     data = {k: clean_text(form.get(k), n, multiline=(k == "description")) for k, n in REQUEST_LIMITS.items()}
     data["service_pref"] = form.get("service_pref") if form.get("service_pref") in ("once", "monthly", "unsure") else "once"
-    days = form.get("funding_days", "21")
-    data["funding_days"] = days if days in ("7", "14", "21", "30") else "21"
     data["consent"] = form.get("consent", "")
     return data
 

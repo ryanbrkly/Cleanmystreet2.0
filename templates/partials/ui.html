@@ -56,6 +56,7 @@
   <span class="album__title">{{ p.title }}</span>
   {{ tape(p.pct, thin=True) }}
   <span class="album__nums"><span><b>{{ p.raised_cents|rand }}</b> of {{ p.goal_cents|rand }}</span><span>{{ p.backers }} neighbour{{ '' if p.backers == 1 else 's' }}</span></span>
+  {% if p.status == 'funding' %}<span class="album__deadline">Closes {{ p.deadline|nice_date }}, full refund if the goal isn’t met</span>{% endif %}
 </a>
 {%- endmacro %}
 

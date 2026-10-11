@@ -636,3 +636,16 @@ label.check, .field label.check { font-weight: 400; font-size: .95rem; display: 
 #sponsors .sponsor-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 #sponsors .sponsor { min-height: 88px; padding: 14px; }
 #sponsors .sponsor img { max-height: 48px; }
+
+/* Refund promise and funding deadline */
+.promise-band { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; margin-top: 40px; padding: 20px 24px; background: var(--leaf-bg); border-radius: var(--r-md); }
+.promise-band svg { color: var(--leaf); }
+.promise-band p { margin: 0; color: var(--ink-2); }
+.promise-band b { color: var(--ink); }
+.promise-band a { font-weight: 700; white-space: nowrap; }
+@media (max-width: 640px) { .promise-band { grid-template-columns: auto minmax(0, 1fr); } .promise-band a { grid-column: 2; } }
+.deadline-line { display: flex; gap: 8px; align-items: flex-start; margin: 14px 0 0; color: var(--ink-2); max-width: 70ch; }
+.deadline-line svg { flex-shrink: 0; margin-top: 3px; color: var(--royal); }
+.deadline-box { display: grid; gap: 2px; margin-top: 18px; padding: 12px 14px; border-radius: var(--r-sm); background: #e7effc; font-size: .88rem; color: var(--ink-2); }
+.deadline-box b { font-size: 1.15rem; color: var(--ink); }
+.album__deadline { font-size: .84rem; color: var(--muted); }

@@ -14,7 +14,6 @@
       <dl class="kv">
         <dt>Location</dt><dd>{{ req.street_name }}, {{ req.suburb }} {{ req.city }} {{ req.postcode }} · <a href="https://www.google.com/maps/search/{{ (req.street_name ~ ', ' ~ req.suburb ~ ', ' ~ req.city)|urlencode }}" target="_blank" rel="noopener">Open in Maps</a></dd>
         <dt>Service wanted</dt><dd>{{ {'once':'Once-off clean','monthly':'Monthly upkeep','unsure':'Not sure — quote both'}[req.service_pref] }}</dd>
-        <dt>Funding window</dt><dd>{{ req.funding_days }} days</dd>
         <dt>Requested by</dt><dd>{{ req.requester_name }} · <a href="mailto:{{ req.email }}">{{ req.email }}</a>{% if req.phone %} · <a href="tel:{{ req.phone }}">{{ req.phone }}</a>{% endif %}</dd>
         <dt>Received</dt><dd>{{ req.created_at|nice_datetime }}{% if req.updated_at != req.created_at %} · updated {{ req.updated_at|nice_datetime }}{% endif %}</dd>
         <dt>Tracking link</dt><dd><button type="button" class="link-btn" data-copy="{{ track_url }}">Copy requester’s link</button></dd>
@@ -71,7 +70,7 @@
               <div class="field"><label for="goal">Funding goal (R)</label><input id="goal" type="text" inputmode="decimal" name="goal_amount" placeholder="Defaults to the quote"><div class="hint">What neighbours must raise.</div></div>
               <div class="field"><label for="budget">Overall budget (R)</label><input id="budget" type="text" inputmode="decimal" name="budget_amount" placeholder="Defaults to goal"><div class="hint">Internal cost to deliver.</div></div>
               <div class="field"><label for="minc">Minimum contribution (R)</label><input id="minc" type="text" inputmode="decimal" name="min_contribution" value="{{ (settings.default_min_contribution_cents|int / 100)|int }}"><div class="hint">Per household / street owner.</div></div>
-              <div class="field"><label for="days">Funding window</label><select id="days" name="funding_days">{% for d in (7, 14, 21, 30, 45) %}<option value="{{ d }}"{% if d == req.funding_days %} selected{% endif %}>{{ d }} days</option>{% endfor %}</select></div>
+              <div class="field"><label for="days">Funding deadline</label><select id="days" name="funding_days">{% for d in (7, 14, 21, 30, 45, 60) %}<option value="{{ d }}"{% if d == (settings.default_funding_days|int(21)) %} selected{% endif %}>{{ d }} days from today</option>{% endfor %}</select><div class="hint">Shown on the project page. If the goal isn’t met by then, everyone is refunded.</div></div>
             </div>
             <button class="btn btn--primary btn--block" type="submit" style="margin-top:14px">Approve and publish</button>
             <p class="tiny muted" style="margin:8px 0 0">The requester is emailed the funding link.</p>

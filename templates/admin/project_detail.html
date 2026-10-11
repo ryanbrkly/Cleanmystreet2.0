@@ -169,6 +169,20 @@
       </form>
     </section>
     {% endif %}
+    <section class="acard" id="delete" style="border-color:#f1c4c6">
+      <h2>Delete project</h2>
+      {% set held = contributions|selectattr('status', 'in', ['paid', 'refund_pending'])|list %}
+      {% if held %}
+        <p class="small">This project holds {{ held|length }} paid contribution{{ '' if held|length == 1 else 's' }}. To protect contributors, cancel it and refund everyone first. Then you can delete it.</p>
+      {% else %}
+        <p class="small">Permanently removes the project page, its photos, videos and updates. This can’t be undone. The original request is kept and marked “Not approved”.</p>
+        <form method="post" data-confirm="Permanently delete this project? This can’t be undone.">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_project">
+          <div class="field" style="margin-bottom:10px"><label for="ct">Type the title to confirm: <b>{{ p.title }}</b></label><input id="ct" type="text" name="confirm_title" autocomplete="off" required></div>
+          <button class="btn btn--danger btn--sm" type="submit">Delete project permanently</button>
+        </form>
+      {% endif %}
+    </section>
   </div>
 </div>
 {% endblock %}

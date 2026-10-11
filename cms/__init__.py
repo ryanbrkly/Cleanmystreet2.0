@@ -47,6 +47,8 @@ def create_app(test_config=None):
         SERVERLESS=serverless,
         SEED_DEMO=os.environ.get("SEED_DEMO", "1" if serverless else "0") == "1",
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-only-change-me"),
+        TURSO_DATABASE_URL=os.environ.get("TURSO_DATABASE_URL", "") or os.environ.get("LIBSQL_URL", ""),
+        TURSO_AUTH_TOKEN=os.environ.get("TURSO_AUTH_TOKEN", "") or os.environ.get("LIBSQL_AUTH_TOKEN", ""),
         DATABASE=os.environ.get("DATABASE_PATH", default_db),
         UPLOAD_FOLDER=os.environ.get("UPLOAD_FOLDER", default_uploads),
         MAX_CONTENT_LENGTH=25 * 1024 * 1024,
@@ -80,6 +82,10 @@ def create_app(test_config=None):
         if app.config["PAYMENT_MODE"] == "yoco" and not app.config["YOCO_SECRET_KEY"]:
             config_errors.append("YOCO_SECRET_KEY is not set.")
     app.config["CONFIG_ERRORS"] = config_errors
+    # Data in /tmp on a serverless host is lost on restart; admins see a warning until a database is connected.
+    app.config["TEMP_STORAGE"] = serverless and not app.config["TURSO_DATABASE_URL"]
+    if not app.config["TURSO_DATABASE_URL"] and not serverless:
+        app.config["SEED_DEMO"] = os.environ.get("SEED_DEMO", "0") == "1"
 
     for folder in (os.path.dirname(app.config["DATABASE"]), app.config["UPLOAD_FOLDER"]):
         try:
@@ -102,7 +108,15 @@ def create_app(test_config=None):
 
     @app.route("/static/uploads/<path:filename>")
     def uploaded_file(filename):
-        return send_from_directory(app.config["UPLOAD_FOLDER"], filename, max_age=86400)
+        from flask import Response, abort
+        row = db.load_media(os.path.basename(filename))
+        if row:
+            resp = Response(bytes(row["data"]), mimetype=row["mime"])
+            resp.headers["Cache-Control"] = "public, max-age=604800, immutable"
+            return resp
+        if os.path.exists(os.path.join(app.config["UPLOAD_FOLDER"], os.path.basename(filename))):
+            return send_from_directory(app.config["UPLOAD_FOLDER"], os.path.basename(filename), max_age=86400)
+        abort(404)
 
     @app.before_request
     def _startup_checks():
@@ -136,6 +150,7 @@ def create_app(test_config=None):
             "payment_mode": app.config["PAYMENT_MODE"],
             "base_url": app.config["PUBLIC_BASE_URL"] or request.host_url.rstrip("/"),
             "now_year": utils.today_sast().year,
+            "temp_storage": app.config.get("TEMP_STORAGE"),
         }
 
     @app.after_request

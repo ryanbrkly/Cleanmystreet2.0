@@ -104,6 +104,16 @@ Vercel picks up `wsgi.py` automatically, so no `vercel.json` is needed. Don't na
 
 For the real site use a host with a persistent disk (below), or ask for the Postgres + file-storage version for Vercel.
 
+### Permanent storage on Vercel (Turso)
+Without a database, Vercel keeps data in temporary storage that is wiped on every restart, and each copy of the app has its own. Requests then "disappear" and links break. Connect a free Turso database (hosted SQLite) to fix this:
+
+1. In Vercel, open the project → **Storage** → **Create Database** → choose **Turso** (or create one at turso.tech).
+2. Connect it to this project. Vercel adds `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` to the environment variables. If you created it on turso.tech, add those two yourself (database URL from `turso db show`, token from `turso db tokens create`).
+3. Set `SEED_DEMO=0` if you want to start with an empty site, or `1` to load the sample projects once.
+4. Redeploy. Tables are created automatically on the first visit. Uploaded photos are stored in the database too.
+
+The admin portal shows a red warning while data is still temporary.
+
 ### Persistent hosts (recommended for the live site)
 
 Any host that runs Python works (Render, Railway, Fly.io, a VPS at Afrihost/Hetzner/xneelo).

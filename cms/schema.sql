@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS contributions (
 );
 
 -- Progress feed items on a project page.
--- kind: photo | video | note ; phase: before | during | after | general
+-- kind: photo | video | note. phase: before | during | after | general
 CREATE TABLE IF NOT EXISTS updates (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -150,3 +150,11 @@ CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_contrib_project ON contributions(project_id, status);
 CREATE INDEX IF NOT EXISTS idx_updates_project ON updates(project_id);
+
+-- Uploaded photos and logos, stored in the database so they survive restarts.
+CREATE TABLE IF NOT EXISTS media (
+    name        TEXT PRIMARY KEY,
+    mime        TEXT NOT NULL,
+    data        BLOB NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

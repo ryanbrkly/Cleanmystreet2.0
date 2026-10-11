@@ -31,6 +31,7 @@
   </aside>
   <main class="admin-main">
     {% if payment_mode == 'demo' %}<div class="demo-banner" style="border-radius:8px;margin-bottom:16px">Demo payments mode — set PAYMENT_MODE=yoco with your Yoco keys to take real payments.</div>{% endif %}
+    {% if temp_storage %}<div class="flash flash--error" style="margin-bottom:16px"><b>Data isn’t being saved permanently.</b> This site runs on Vercel without a database, so new requests, projects and photos can disappear and links can break. Connect a Turso database (see README, “Permanent storage on Vercel”) to fix this.</div>{% endif %}
     {% from "partials/ui.html" import flashes %}{{ flashes() }}
     {% block main %}{% endblock %}
   </main>

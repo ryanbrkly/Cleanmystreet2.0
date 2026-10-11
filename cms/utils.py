@@ -1,4 +1,5 @@
 """Small shared helpers: money, dates, slugs, YouTube, uploads, CSRF."""
+import io
 import json
 import os
 import re
@@ -151,19 +152,21 @@ def save_image(file_storage, max_side=1800, prefix="img"):
     img = img.convert("RGBA" if keep_alpha else "RGB")
     img.thumbnail((max_side, max_side))
     name = f"{prefix}-{secrets.token_hex(8)}." + ("png" if keep_alpha else "jpg")
-    folder = current_app.config["UPLOAD_FOLDER"]
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, name)
+    buf = io.BytesIO()
     if keep_alpha:
-        img.save(path, optimize=True)
+        img.save(buf, "PNG", optimize=True)
     else:
-        img.save(path, quality=82, optimize=True, progressive=True)
+        img.save(buf, "JPEG", quality=82, optimize=True, progressive=True)
+    from .db import store_media
+    store_media(name, "image/png" if keep_alpha else "image/jpeg", buf.getvalue())
     return name
 
 
 def delete_upload(name):
     if not name:
         return
+    from .db import delete_media
+    delete_media(os.path.basename(name))
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(name))
     if os.path.exists(path):
         os.remove(path)

@@ -435,3 +435,142 @@ class SecurityTests(Base):
         self.assertEqual(self.client.get("/pay/return/nope").status_code, 404)
         self.app.config["PAYMENT_MODE"] = "yoco"
         self.assertEqual(self.client.get("/pay/demo/anything").status_code, 404)
+
+
+class DeleteTests(Base):
+    def test_delete_project_blocked_while_money_held_then_allowed(self):
+        self.submit_request()
+        p, token = self.approve(goal="5000")
+        r = self.contribute(p["slug"], "500", token)
+        t = r.headers["Location"].rsplit("/", 1)[1]
+        self.client.post(f"/pay/demo/{t}", data={"_csrf": token, "outcome": "success"})
+        self.client.post(f"/admin/projects/{p['id']}", data={
+            "_csrf": token, "action": "add_photos", "phase": "before", "photos": [(png_bytes(), "a.png")]},
+            content_type="multipart/form-data")
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "delete_project",
+                                                             "confirm_title": p["title"]})
+        with self.app.app_context():
+            self.assertIsNotNone(query("SELECT 1 FROM projects WHERE id=?", (p["id"],), one=True))
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "cancel", "reason": "x"})
+        r = self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "delete_project",
+                                                                 "confirm_title": "wrong"})
+        with self.app.app_context():
+            self.assertIsNotNone(query("SELECT 1 FROM projects WHERE id=?", (p["id"],), one=True))
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "delete_project",
+                                                             "confirm_title": p["title"]})
+        with self.app.app_context():
+            self.assertIsNone(query("SELECT 1 FROM projects WHERE id=?", (p["id"],), one=True))
+            self.assertEqual(query("SELECT COUNT(*) n FROM updates", one=True)["n"], 0)
+            self.assertEqual(query("SELECT status FROM requests", one=True)["status"], "rejected")
+        self.assertEqual(self.client.get(f"/projects/{p['slug']}").status_code, 404)
+        self.assertEqual(self.client.get("/admin/projects").status_code, 200)
+
+    def test_delete_request(self):
+        self.submit_request()
+        token = self.login()
+        with self.app.app_context():
+            req = query("SELECT * FROM requests", one=True)
+        photo_url = f"/static/uploads/{req['photo']}"
+        self.assertEqual(self.client.get(photo_url).status_code, 200)
+        self.client.post(f"/admin/requests/{req['id']}", data={"_csrf": token, "action": "delete_request"})
+        with self.app.app_context():
+            self.assertEqual(query("SELECT COUNT(*) n FROM requests", one=True)["n"], 0)
+        self.assertEqual(self.client.get(photo_url).status_code, 404)
+        self.assertEqual(self.client.get(f"/track/{req['token']}").status_code, 404)
+
+
+# ---------------------------------------------------------------- simulated Turso server
+import sqlite3 as _sqlite3
+
+
+class FakeTurso:
+    """Implements the Hrana-over-HTTP v2 pipeline endpoint on top of an in-memory SQLite db."""
+
+    def __init__(self):
+        self.conn = _sqlite3.connect(":memory:", check_same_thread=False)
+        self.calls = 0
+
+    @staticmethod
+    def _dec(a):
+        t = a["type"]
+        if t == "null": return None
+        if t == "integer": return int(a["value"])
+        if t == "float": return float(a["value"])
+        if t == "blob": return base64.b64decode(a["base64"])
+        return a["value"]
+
+    @staticmethod
+    def _enc(v):
+        if v is None: return {"type": "null"}
+        if isinstance(v, int): return {"type": "integer", "value": str(v)}
+        if isinstance(v, float): return {"type": "float", "value": v}
+        if isinstance(v, bytes): return {"type": "blob", "base64": base64.b64encode(v).decode()}
+        return {"type": "text", "value": v}
+
+    def post(self, url, json=None, timeout=None):
+        assert url.endswith("/v2/pipeline"), url
+        self.calls += 1
+        results = []
+        for r in json["requests"]:
+            if r["type"] == "close":
+                results.append({"type": "ok", "response": {"type": "close"}})
+                continue
+            st = r["stmt"]
+            try:
+                cur = self.conn.execute(st["sql"], [self._dec(a) for a in st.get("args", [])])
+                rows = cur.fetchall()
+                self.conn.commit()
+                results.append({"type": "ok", "response": {"type": "execute", "result": {
+                    "cols": [{"name": d[0]} for d in (cur.description or [])],
+                    "rows": [[self._enc(v) for v in row] for row in rows],
+                    "affected_row_count": cur.rowcount, "last_insert_rowid": str(cur.lastrowid or "")}}})
+            except Exception as exc:  # noqa: BLE001
+                results.append({"type": "error", "error": {"message": str(exc)}})
+        resp = mock.Mock(status_code=200)
+        resp.json.return_value = {"baton": None, "results": results}
+        return resp
+
+
+class TursoBackendTests(Base):
+    def setUp(self):
+        self.fake = FakeTurso()
+        patcher = mock.patch("cms.db.requests.Session.post", side_effect=lambda url, json=None, timeout=None: self.fake.post(url, json, timeout))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.tmp = tempfile.mkdtemp()
+        self.app = create_app({
+            "TESTING": True, "DATABASE": os.path.join(self.tmp, "unused.sqlite3"),
+            "UPLOAD_FOLDER": os.path.join(self.tmp, "uploads"), "PAYMENT_MODE": "demo",
+            "TURSO_DATABASE_URL": "libsql://cms-test.turso.io", "TURSO_AUTH_TOKEN": "t",
+            "YOCO_WEBHOOK_SECRET": WEBHOOK_SECRET, "CRON_SECRET": "cron123", "SEED_DEMO": True,
+        })
+        self.client = self.app.test_client()
+        with self.app.app_context():
+            init_db()
+            from cms.seed import seed_demo
+            seed_demo()
+            from werkzeug.security import generate_password_hash
+            execute("INSERT INTO admins(email, name, password_hash) VALUES (?,?,?)",
+                    ("a@x.co.za", "Admin", generate_password_hash("pw-123456")))
+
+    def test_everything_runs_on_turso(self):
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "unused.sqlite3")))
+        home = self.client.get("/").get_data(as_text=True)
+        self.assertIn("Beyers Naudé Drive service lane", home)
+        img = re.search(r'src="(/static/uploads/[^"]+)"', home).group(1)
+        r = self.client.get(img)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.mimetype, "image/jpeg")
+        self.assertGreater(len(r.data), 1000)
+        # full flow on the remote database
+        self.submit_request()
+        p, token = self.approve(goal="2000")
+        r = self.contribute(p["slug"], "2000", token)
+        t = r.headers["Location"].rsplit("/", 1)[1]
+        self.client.post(f"/pay/demo/{t}", data={"_csrf": token, "outcome": "success"})
+        with self.app.app_context():
+            self.assertEqual(query("SELECT status FROM projects WHERE id=?", (p["id"],), one=True)["status"], "funded")
+        for path in ("/admin/", "/admin/requests", "/admin/projects", "/admin/payments", "/admin/sponsors",
+                     "/admin/settings", f"/admin/projects/{p['id']}", "/projects?status=all"):
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+        self.assertGreater(self.fake.calls, 20)

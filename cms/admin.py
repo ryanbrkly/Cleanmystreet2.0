@@ -226,6 +226,18 @@ def request_detail(rid):
                     (request.form.get("internal_note", ""), now_iso(), rid))
             flash("Internal note saved.", "success")
 
+        elif action == "delete_request":
+            if req["project_id"]:
+                flash("This request has a project. Delete the project first.", "error")
+                return redirect(url_for("admin.request_detail", rid=rid))
+            if req["photo"]:
+                delete_upload(req["photo"])
+            execute("DELETE FROM quotes WHERE request_id=?", (rid,))
+            execute("DELETE FROM requests WHERE id=?", (rid,))
+            log_activity("request_deleted", f"{req['ref']} {req['street_name']}")
+            flash(f"Request {req['ref']} deleted.", "success")
+            return redirect(url_for("admin.requests_list"))
+
         elif action == "reopen":
             execute("UPDATE requests SET status='under_review', updated_at=? WHERE id=?", (now_iso(), rid))
             flash("Request reopened.", "success")
@@ -361,6 +373,30 @@ def project_detail(pid):
                 flash(f"Refund issued to {c['name']}.", "success")
             else:
                 flash("Refund could not be issued — see the contribution status.", "error")
+
+        elif action == "delete_project":
+            held = query("SELECT COUNT(*) n FROM contributions WHERE project_id=? AND status IN ('paid','refund_pending')",
+                         (pid,), one=True)["n"]
+            if held:
+                flash(f"This project still holds {held} paid contribution{'s' if held != 1 else ''}. "
+                      "Cancel it and refund everyone first, then delete it.", "error")
+                return redirect(url_for("admin.project_detail", pid=pid))
+            if f.get("confirm_title", "").strip() != p["title"].strip():
+                flash("Type the project title exactly to confirm deleting it.", "error")
+                return redirect(url_for("admin.project_detail", pid=pid) + "#delete")
+            for u in query("SELECT image FROM updates WHERE project_id=? AND image IS NOT NULL", (pid,)):
+                delete_upload(u["image"])
+            if p["cover_image"] and not query("SELECT 1 FROM requests WHERE photo=?", (p["cover_image"],), one=True):
+                delete_upload(p["cover_image"])
+            execute("DELETE FROM updates WHERE project_id=?", (pid,))
+            execute("DELETE FROM contributions WHERE project_id=?", (pid,))
+            execute("UPDATE projects SET parent_id=NULL WHERE parent_id=?", (pid,))
+            execute("UPDATE requests SET project_id=NULL, status='rejected', admin_note=?, updated_at=? WHERE project_id=?",
+                    ("Project removed by Clean My Street.", now_iso(), pid))
+            execute("DELETE FROM projects WHERE id=?", (pid,))
+            log_activity("project_deleted", p["title"])
+            flash(f"“{p['title']}” was deleted.", "success")
+            return redirect(url_for("admin.projects_list"))
 
         elif action == "next_round":
             if p["service_type"] != "monthly":

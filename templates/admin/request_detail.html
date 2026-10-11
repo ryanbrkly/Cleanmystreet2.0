@@ -114,6 +114,16 @@
         <button class="btn btn--ghost btn--sm" type="submit" style="margin-top:10px">Save note</button>
       </form>
     </section>
+    {% if not req.project_id %}
+    <section class="acard" style="border-color:#f1c4c6">
+      <h2>Delete request</h2>
+      <p class="small">For spam, duplicates or test requests. Removes the request and its photo permanently.</p>
+      <form method="post" data-confirm="Permanently delete request {{ req.ref }}?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_request">
+        <button class="btn btn--danger btn--sm" type="submit">Delete request</button>
+      </form>
+    </section>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

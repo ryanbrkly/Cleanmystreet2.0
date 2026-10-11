@@ -3,6 +3,7 @@
 Everything created here is sample content. Delete the database file (or run
 `flask reset-demo`, see README) before going live.
 """
+import io
 import json
 import os
 import shutil
@@ -12,7 +13,7 @@ from datetime import timedelta
 from flask import current_app
 from PIL import Image, ImageDraw, ImageFont
 
-from .db import execute, init_db, query
+from .db import execute, init_db, query, store_media
 from .utils import make_ref, make_token, today_sast
 
 GALLERY_DIR = "img/gallery"
@@ -22,7 +23,8 @@ def _copy_gallery(name, prefix):
     """Copy a bundled crew photo into uploads so demo updates behave like real uploads."""
     src = os.path.join(current_app.static_folder, GALLERY_DIR, f"{name}.jpg")
     dest_name = f"{prefix}-{name}-{secrets.token_hex(3)}.jpg"
-    shutil.copy(src, os.path.join(current_app.config["UPLOAD_FOLDER"], dest_name))
+    with open(src, "rb") as fh:
+        store_media(dest_name, "image/jpeg", fh.read())
     return dest_name
 
 
@@ -38,7 +40,9 @@ def _placeholder_logo(label, colour):
     d.text((240, 88), label, fill=colour, font=font, anchor="mm")
     d.text((240, 140), "sample sponsor", fill=colour, font=small, anchor="mm")
     name = f"sponsor-demo-{secrets.token_hex(3)}.png"
-    img.save(os.path.join(current_app.config["UPLOAD_FOLDER"], name))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    store_media(name, "image/png", buf.getvalue())
     return name
 
 

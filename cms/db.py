@@ -1,13 +1,22 @@
-"""SQLite access helpers.
+"""Database access.
 
-A single connection is opened per request and closed on teardown. Rows are
-returned as sqlite3.Row so templates can use row["field"] or row.field-style
-access through dict().
+Two back ends, same SQL (SQLite dialect):
+
+- Local SQLite file (default). Good for a VPS or any host with a permanent disk.
+- Turso (hosted, SQLite-compatible) over HTTPS, when TURSO_DATABASE_URL is set.
+  Use this on Vercel and other serverless hosts, whose disks are wiped on restart.
+  Uses the Hrana-over-HTTP "pipeline" endpoint, so no extra Python packages.
+
+Rows behave like sqlite3.Row: row["col"], dict(row), and attribute-style access
+in templates.
 """
+import base64
 import os
 import sqlite3
+from collections.abc import Mapping
 from datetime import datetime
 
+import requests
 from flask import current_app, g
 
 DEFAULT_SETTINGS = {
@@ -27,15 +36,150 @@ DEFAULT_SETTINGS = {
 }
 
 
+# ---------------------------------------------------------------- Turso (Hrana over HTTP)
+
+
+class DatabaseError(Exception):
+    pass
+
+
+class Row(Mapping):
+    """Read-only row compatible with sqlite3.Row usage in this app."""
+
+    __slots__ = ("_cols", "_vals")
+
+    def __init__(self, cols, vals):
+        self._cols = cols
+        self._vals = vals
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._vals[key]
+        try:
+            return self._vals[self._cols.index(key)]
+        except ValueError:
+            raise KeyError(key) from None
+
+    def __iter__(self):
+        return iter(self._cols)
+
+    def __len__(self):
+        return len(self._cols)
+
+    def keys(self):
+        return list(self._cols)
+
+
+def _encode(value):
+    if value is None:
+        return {"type": "null"}
+    if isinstance(value, bool):
+        return {"type": "integer", "value": str(int(value))}
+    if isinstance(value, int):
+        return {"type": "integer", "value": str(value)}
+    if isinstance(value, float):
+        return {"type": "float", "value": value}
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return {"type": "blob", "base64": base64.b64encode(bytes(value)).decode()}
+    return {"type": "text", "value": str(value)}
+
+
+def _decode(cell):
+    kind = cell.get("type")
+    if kind == "null":
+        return None
+    if kind == "integer":
+        return int(cell["value"])
+    if kind == "float":
+        return float(cell["value"])
+    if kind == "blob":
+        return base64.b64decode(cell.get("base64", ""))
+    return cell.get("value")
+
+
+class _Cursor:
+    def __init__(self, rows, lastrowid):
+        self._rows = rows
+        self.lastrowid = lastrowid
+
+    def fetchall(self):
+        return self._rows
+
+    def close(self):
+        pass
+
+
+class TursoConnection:
+    """Minimal connection object with the subset of the sqlite3 API this app uses."""
+
+    def __init__(self, url, token):
+        url = url.strip()
+        if url.startswith("libsql://"):
+            url = "https://" + url[len("libsql://"):]
+        self.endpoint = url.rstrip("/") + "/v2/pipeline"
+        self.session = requests.Session()
+        self.session.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+
+    def _pipeline(self, statements):
+        reqs = [{"type": "execute", "stmt": {"sql": sql, "args": [_encode(a) for a in args]}}
+                for sql, args in statements]
+        reqs.append({"type": "close"})
+        try:
+            resp = self.session.post(self.endpoint, json={"requests": reqs}, timeout=20)
+        except requests.RequestException as exc:
+            raise DatabaseError(f"Could not reach the database: {exc}") from exc
+        if resp.status_code >= 400:
+            raise DatabaseError(f"Database returned HTTP {resp.status_code}: {resp.text[:300]}")
+        out = []
+        for item in resp.json().get("results", [])[:-1]:
+            if item.get("type") != "ok":
+                raise DatabaseError((item.get("error") or {}).get("message", "Database error"))
+            out.append(item["response"]["result"])
+        return out
+
+    def execute(self, sql, args=()):
+        result = self._pipeline([(sql, tuple(args))])[0]
+        cols = [c.get("name") for c in result.get("cols", [])]
+        rows = [Row(cols, [_decode(c) for c in r]) for r in result.get("rows", [])]
+        last = result.get("last_insert_rowid")
+        return _Cursor(rows, int(last) if last not in (None, "") else None)
+
+    def executescript(self, script):
+        statements = []
+        for chunk in script.split(";"):
+            sql = "\n".join(line for line in chunk.splitlines() if not line.strip().startswith("--")).strip()
+            if sql and not sql.upper().startswith("PRAGMA"):
+                statements.append((sql, ()))
+        if statements:
+            self._pipeline(statements)
+
+    def commit(self):
+        pass  # each pipeline is committed by the server
+
+    def close(self):
+        self.session.close()
+
+
+# ---------------------------------------------------------------- connection management
+
+
+def using_turso():
+    return bool(current_app.config.get("TURSO_DATABASE_URL"))
+
+
 def get_db():
     if "db" not in g:
-        path = current_app.config["DATABASE"]
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        conn = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
-        g.db = conn
+        if using_turso():
+            g.db = TursoConnection(current_app.config["TURSO_DATABASE_URL"],
+                                   current_app.config.get("TURSO_AUTH_TOKEN", ""))
+        else:
+            path = current_app.config["DATABASE"]
+            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+            conn = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA journal_mode = WAL")
+            g.db = conn
     return g.db
 
 
@@ -66,6 +210,25 @@ def execute(sql, args=()):
     cur = conn.execute(sql, args)
     conn.commit()
     return cur.lastrowid
+
+
+# ---------------------------------------------------------------- media (uploaded photos)
+# Photos are stored in the database so they survive restarts on any host.
+
+
+def store_media(name, mime, data):
+    execute("INSERT OR REPLACE INTO media(name, mime, data) VALUES (?, ?, ?)", (name, mime, data))
+
+
+def load_media(name):
+    return query("SELECT mime, data FROM media WHERE name=?", (name,), one=True)
+
+
+def delete_media(name):
+    execute("DELETE FROM media WHERE name=?", (name,))
+
+
+# ---------------------------------------------------------------- settings & activity
 
 
 def get_settings():

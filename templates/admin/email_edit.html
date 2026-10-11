@@ -1,0 +1,53 @@
+{% extends "admin/base.html" %}
+{% set title = meta.label %}
+{% block main %}
+<div class="admin-top">
+  <div><div class="crumbs"><a href="{{ url_for('admin.emails_list') }}">Emails</a> / {{ meta.group }}</div>
+  <h1>{{ meta.label }}</h1>
+  <p class="muted" style="margin:4px 0 0">{{ meta.when }}{% if key != 'layout' %} · <span class="pill {{ 'pill--paid' if enabled else 'pill--failed' }}">{{ 'On' if enabled else 'Off' }}</span>{% endif %}{% if custom %} · Customised{% endif %}</p></div>
+</div>
+
+<div class="email-editor">
+  <div>
+    <form method="post" id="email-form" data-live-preview="{{ url_for('admin.email_preview', key=key) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <section class="acard">
+        {% if key != 'layout' %}
+        <div class="field" style="margin-bottom:12px"><label for="em-subject">Subject</label><input id="em-subject" type="text" name="subject" value="{{ subject }}" maxlength="200" required data-insert-target></div>
+        {% endif %}
+        <div class="field"><label for="em-html">HTML</label><textarea id="em-html" name="html" rows="24" spellcheck="false" class="code" data-insert-target>{{ html }}</textarea>
+          <div class="hint">Use inline styles (<code>style="…"</code>): most email apps ignore stylesheets. Scripts and forms don’t work in email.</div></div>
+        <div class="email-buttons">
+          <button class="btn btn--primary" type="submit" name="action" value="save">Save</button>
+          <button class="btn btn--ghost" type="submit" name="action" value="test">Send test to me</button>
+          <button class="btn btn--ghost" type="submit" formaction="{{ url_for('admin.email_preview', key=key) }}" formtarget="email-preview" data-preview-button>Refresh preview</button>
+        </div>
+      </section>
+    </form>
+    <section class="acard">
+      <h2>Details you can use</h2>
+      <p class="tiny muted" style="margin-top:-8px">Click to insert at the cursor.</p>
+      <div class="var-list">
+        {% for name, desc in meta.vars %}
+        <button type="button" class="var" data-insert="{{ '{{ ' ~ name ~ ' }}' }}"><code>{{ name }}</code><span>{{ desc }}</span></button>
+        {% endfor %}
+        {% if key != 'layout' %}
+        <button type="button" class="var" data-insert='{{ "{{ button(" ~ ("track_url" if "track_url" in meta.vars|map("first")|list else "project_url") ~ ", \"Open\") }}" }}'><code>button(link, "Label")</code><span>A big tappable button</span></button>
+        {% if "pct" in meta.vars|map("first")|list %}<button type="button" class="var" data-insert="{{ '{{ progress(pct) }}' }}"><code>progress(pct)</code><span>Funding progress bar</span></button>{% endif %}
+        <button type="button" class="var" data-insert="{{ '{% if note %}…{% endif %}' }}"><code>{% raw %}{% if … %}{% endraw %}</code><span>Show something only when a detail is filled in</span></button>
+        {% endif %}
+      </div>
+    </section>
+    {% if custom %}
+    <form method="post" data-confirm="Throw away your changes and go back to the original email?">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="reset">
+      <button class="link-btn small" type="submit">Reset to the original</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="email-preview">
+    <div class="email-preview__bar"><b>Preview</b> <span class="tiny muted">with sample details · updates as you type</span></div>
+    <iframe name="email-preview" title="Email preview" src="{{ url_for('admin.email_preview', key=key) }}" sandbox></iframe>
+  </div>
+</div>
+{% endblock %}

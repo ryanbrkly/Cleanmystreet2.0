@@ -15,7 +15,7 @@ CSP = ("default-src 'self'; "
        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
        "font-src 'self' https://fonts.gstatic.com; "
        "script-src 'self'; "
-       "frame-src https://www.youtube-nocookie.com; "
+       "frame-src 'self' https://www.youtube-nocookie.com; "
        "form-action 'self' https://*.yoco.com https://yoco.com; "
        "base-uri 'self'; frame-ancestors 'self'")
 
@@ -63,6 +63,7 @@ def create_app(test_config=None):
         SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
         MAIL_FROM=os.environ.get("MAIL_FROM", "Clean My Street <info@cleanmystreet.co.za>"),
         MAIL_REPLY_TO=os.environ.get("MAIL_REPLY_TO", ""),
+        SITE_URL=os.environ.get("SITE_URL", "").rstrip("/"),
         ADMIN_NOTIFY_EMAIL=os.environ.get("ADMIN_NOTIFY_EMAIL", ""),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",

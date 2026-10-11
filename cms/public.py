@@ -6,6 +6,7 @@ from flask import (Blueprint, Response, abort, current_app, flash, redirect, ren
                    url_for)
 
 from . import notify, payments
+from .emails import abs_url, request_context
 from .db import execute, get_settings, now_iso, query
 from .services import (REQUEST_STATUS_LABELS, get_project_by_slug, mark_contribution_paid,
                        new_return_token, process_expired_projects, project_view, public_stats)
@@ -178,12 +179,11 @@ def request_clean():
                  form.get("service_pref", "once"), int(settings.get("default_funding_days") or 21), photo,
                  form["requester_name"].strip(), form["email"].strip().lower(), form.get("phone", "").strip()),
             )
-            track_url = url_for("public.track", token=token, _external=True)
-            notify.send(form["email"], f"We've received your request ({ref})", "request_received",
-                        name=form["requester_name"], ref=ref, street=form["street_name"], url=track_url)
-            notify.notify_admins(f"New cleaning request {ref}: {form['street_name']}", "admin_new_request",
-                                 ref=ref, street=form["street_name"], city=form["city"],
-                                 url=url_for("admin.requests_list", _external=True))
+            new = query("SELECT * FROM requests WHERE token=?", (token,), one=True)
+            ctx = request_context(new)
+            notify.send(new["email"], "request_received", "request", new["id"], **ctx)
+            notify.notify_admins("admin_new_request", "request", new["id"],
+                                 **dict(ctx, admin_url=abs_url("admin.request_detail", rid=new["id"])))
             return redirect(url_for("public.track", token=token, new=1))
     return render_template("pages/request.html", form=form, errors=errors,
                            default_days=int(settings.get("default_funding_days") or 21))
@@ -241,9 +241,11 @@ def track(token):
                  form["postcode"].strip(), form["description"].strip(), form.get("service_pref", "once"),
                  photo, now_iso(), req["id"]),
             )
-            notify.notify_admins(f"Request {req['ref']} updated by requester", "admin_new_request",
-                                 ref=req["ref"], street=form["street_name"], city=form["city"],
-                                 url=url_for("admin.request_detail", rid=req["id"], _external=True))
+            fresh = query("SELECT * FROM requests WHERE id=?", (req["id"],), one=True)
+            ctx = request_context(fresh)
+            notify.send(fresh["email"], "request_updated", "request", fresh["id"], **ctx)
+            notify.notify_admins("admin_new_request", "request", fresh["id"],
+                                 **dict(ctx, admin_url=abs_url("admin.request_detail", rid=fresh["id"])))
             flash("Thanks — your updated request has been sent back to our team.", "success")
             return redirect(url_for("public.track", token=token))
     project = None

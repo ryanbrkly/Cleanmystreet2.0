@@ -33,16 +33,17 @@
     {% if p.status not in ('failed', 'cancelled', 'completed') %}
     <section class="acard">
       <h2>Move the project forward</h2>
-      <div class="status-steps">
-        {% set moves = [('funded','Mark funded'),('scheduled','Mark clean scheduled'),('in_progress','Start cleaning'),('completed','Mark completed')] %}
-        {% for key, label in moves %}
-          <form method="post"{% if key == 'completed' %} data-confirm="Mark complete and email every contributor?"{% endif %}>
-            <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="set_status"><input type="hidden" name="status" value="{{ key }}">
-            <button class="btn btn--sm {{ 'btn--primary' if (p.status == 'funding' and key == 'funded') or (p.status == 'funded' and key == 'scheduled') or (p.status == 'scheduled' and key == 'in_progress') or (p.status == 'in_progress' and key == 'completed') else 'btn--ghost' }}" type="submit"{% if p.status == key %} disabled{% endif %}>{{ label }}</button>
-          </form>
-        {% endfor %}
-      </div>
-      <p class="tiny muted" style="margin:10px 0 0">Funding is marked automatically when the goal is reached. “Scheduled” and “Completed” email every contributor.{% if p.status == 'funding' and p.raised_cents < p.goal_cents %} Marking funded early means you’ll cover the shortfall of {{ p.remaining_cents|rand }}.{% endif %}</p>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="set_status"><input type="hidden" name="has_notify" value="1">
+        <div class="status-steps">
+          {% set moves = [('funded','Mark funded'),('scheduled','Mark clean scheduled'),('in_progress','Start cleaning'),('completed','Mark completed')] %}
+          {% for key, label in moves %}
+            <button name="status" value="{{ key }}" class="btn btn--sm {{ 'btn--primary' if (p.status == 'funding' and key == 'funded') or (p.status == 'funded' and key == 'scheduled') or (p.status == 'scheduled' and key == 'in_progress') or (p.status == 'in_progress' and key == 'completed') else 'btn--ghost' }}" type="submit"{% if p.status == key %} disabled{% endif %}>{{ label }}</button>
+          {% endfor %}
+        </div>
+        <label class="check small" style="margin-top:12px"><input type="checkbox" name="notify" value="1" checked> <span>Email backers and the requester about the change (scheduled, started, completed)</span></label>
+      </form>
+      <p class="tiny muted" style="margin:10px 0 0">Funding is marked automatically when the goal is reached. Fill in “Clean scheduled for” on the right before marking it scheduled, so the email includes the date. <a href="{{ url_for('admin.emails_list') }}">Edit these emails</a>.{% if p.status == 'funding' and p.raised_cents < p.goal_cents %} Marking funded early means you’ll cover the shortfall of {{ p.remaining_cents|rand }}.{% endif %}</p>
     </section>
     {% endif %}
 
@@ -58,6 +59,7 @@
               <div class="field"><label for="phase1">Stage</label><select id="phase1" name="phase"><option value="before">Before</option><option value="during" selected>During</option><option value="after">After</option><option value="general">General</option></select></div>
               <div class="field"><label for="pt">Caption</label><input id="pt" type="text" name="title" placeholder="e.g. Drains cleared"></div>
             </div>
+<label class="check small" style="margin-top:10px"><input type="checkbox" name="notify" value="1"> <span>Email backers and the requester</span></label>
             <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Publish photos</button>
           </details>
         </form>
@@ -71,6 +73,7 @@
                 <div class="field"><label for="phase2">Stage</label><select id="phase2" name="phase"><option value="before">Before</option><option value="during">During</option><option value="after">After</option><option value="general" selected>General</option></select></div>
                 <div class="field"><label for="vt">Title</label><input id="vt" type="text" name="title"></div>
               </div>
+  <label class="check small" style="margin-top:10px"><input type="checkbox" name="notify" value="1"> <span>Email backers and the requester</span></label>
               <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Add video</button>
             </form>
           </details>
@@ -81,7 +84,7 @@
               <div class="field" style="margin-bottom:8px"><label for="nt">Headline</label><input id="nt" type="text" name="title"></div>
               <div class="field" style="margin-bottom:8px"><label for="nb">Update</label><textarea id="nb" name="body" rows="3" required></textarea></div>
               <input type="hidden" name="phase" value="general">
-              <label class="check small"><input type="checkbox" name="notify" value="1"> <span>Email all contributors</span></label>
+              <label class="check small"><input type="checkbox" name="notify" value="1"> <span>Email backers and the requester</span></label>
               <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Post update</button>
             </form>
           </details>
@@ -121,6 +124,8 @@
       </table></div>
       {% else %}<p class="muted" style="margin:0">No contributions yet. Share the funding link with the requester’s street.</p>{% endif %}
     </section>
+
+    {% include "admin/_email_history.html" %}
   </div>
 
   <div>

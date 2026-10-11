@@ -713,3 +713,22 @@ label.check, .field label.check { font-weight: 400; font-size: .95rem; display: 
 .nearby { display: grid; gap: 10px; margin: 12px 0; }
 .sponsor-row-mini { display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px; text-decoration: none; color: var(--ink); }
 .sponsor-row-mini:hover { border-color: var(--ink); }
+
+/* ------------------------------------------------------------ admin: emails */
+.email-table td { vertical-align: middle; }
+.email-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; white-space: nowrap; }
+.pill--mail-sent { background: var(--leaf-bg); color: #4b7c12; }
+.pill--mail-logged, .pill--mail-off { background: var(--paving); color: var(--muted); }
+.pill--mail-failed { background: var(--danger-bg); color: var(--danger); }
+.email-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1100px) { .email-editor { grid-template-columns: 1fr; } }
+textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; white-space: pre; overflow-wrap: normal; overflow-x: auto; min-height: 420px; }
+.email-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.email-preview { position: sticky; top: 16px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.email-preview__bar { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: baseline; }
+.email-preview iframe { display: block; width: 100%; height: min(78vh, 900px); border: 0; background: #f2f3f0; }
+.var-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.var { text-align: left; display: grid; gap: 2px; background: var(--paving); border: 1px solid transparent; border-radius: var(--r-sm); padding: 8px 10px; cursor: pointer; font: inherit; color: var(--ink); }
+.var:hover, .var:focus-visible { border-color: var(--ink); }
+.var code { font-size: .85rem; font-weight: 700; }
+.var span { font-size: .8rem; color: var(--muted); }

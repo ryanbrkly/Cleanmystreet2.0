@@ -168,3 +168,27 @@ CREATE TABLE IF NOT EXISTS project_sponsors (
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (project_id, sponsor_id)
 );
+
+-- Email templates edited in the admin portal (defaults live in cms/emails.py).
+CREATE TABLE IF NOT EXISTS email_templates (
+    key         TEXT PRIMARY KEY,
+    subject     TEXT NOT NULL DEFAULT '',
+    html        TEXT NOT NULL DEFAULT '',
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_by  TEXT NOT NULL DEFAULT ''
+);
+
+-- Every email the site tried to send.
+CREATE TABLE IF NOT EXISTS email_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    to_addr     TEXT NOT NULL,
+    template    TEXT NOT NULL,
+    subject     TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL,
+    error       TEXT NOT NULL DEFAULT '',
+    ref_type    TEXT NOT NULL DEFAULT '',
+    ref_id      INTEGER,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_log_ref ON email_log(ref_type, ref_id)

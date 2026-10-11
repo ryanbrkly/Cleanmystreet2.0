@@ -9,13 +9,15 @@ from flask import (Blueprint, Response, abort, flash, g, redirect, render_templa
                    url_for)
 from werkzeug.security import check_password_hash
 
-from . import notify
+from . import emails, notify
+from .emails import abs_url, project_context, request_context
 from .db import execute, get_settings, log_activity, now_iso, query, set_setting
 from .services import (REQUEST_STATUS_LABELS, STATUS_LABELS, close_and_refund, create_project_from_request,
-                       email_backers, get_project, open_next_monthly_round, process_expired_projects,
+                       email_followers, get_project, open_next_monthly_round, process_expired_projects,
                        project_url, project_view, refund_contribution)
 from .utils import (clean_text, delete_upload, safe_url, line_items_text, load_json, parse_line_items, parse_rand, rand,
-                    save_image, youtube_id)
+                    save_image, valid_email, youtube_id)
+from markupsafe import escape
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -151,7 +153,6 @@ def request_detail(rid):
 
     if request.method == "POST":
         action = request.form.get("action")
-        track_url = url_for("public.track", token=req["token"], _external=True)
 
         if action == "save_quote":
             items = parse_line_items(request.form.get("line_items"))
@@ -194,8 +195,8 @@ def request_detail(rid):
                 min_contribution_cents=min_c, funding_days=days, title=title,
                 summary=request.form.get("summary", "").strip() or req["description"])
             project = get_project(pid)
-            notify.send(req["email"], f"Approved: your funding link for {req['street_name']}", "request_approved",
-                        req=req, project=project, url=project_url(project))
+            notify.send(req["email"], "request_approved", "request", rid,
+                        **dict(project_context(project), **request_context(req)))
             log_activity("request_approved", f"{req['ref']} → project {pid} goal {rand(goal)}")
             flash("Approved and published. The funding link has been sent to the requester.", "success")
             return redirect(url_for("admin.project_detail", pid=pid))
@@ -204,8 +205,7 @@ def request_detail(rid):
             note = request.form.get("note", "").strip()
             execute("UPDATE requests SET status='rejected', admin_note=?, updated_at=? WHERE id=?",
                     (note, now_iso(), rid))
-            notify.send(req["email"], f"Update on your request {req['ref']}", "request_rejected",
-                        req=req, note=note, url=track_url)
+            notify.send(req["email"], "request_rejected", "request", rid, **dict(request_context(req), note=note))
             log_activity("request_rejected", f"{req['ref']}: {note}")
             flash("Request rejected and the requester notified.", "success")
 
@@ -216,8 +216,7 @@ def request_detail(rid):
                 return redirect(url_for("admin.request_detail", rid=rid))
             execute("UPDATE requests SET status='revision_requested', admin_note=?, updated_at=? WHERE id=?",
                     (note, now_iso(), rid))
-            notify.send(req["email"], f"Please update your request {req['ref']}", "request_revision",
-                        req=req, note=note, url=track_url)
+            notify.send(req["email"], "request_revision", "request", rid, **dict(request_context(req), note=note))
             log_activity("revision_requested", f"{req['ref']}: {note}")
             flash("Revision requested. The requester can edit via their tracking link.", "success")
 
@@ -246,7 +245,8 @@ def request_detail(rid):
     return render_template("admin/request_detail.html", req=req, quote=quote,
                            items_text=line_items_text(load_json(quote["line_items"])) if quote else "",
                            settings=settings,
-                           track_url=url_for("public.track", token=req["token"], _external=True))
+                           track_url=url_for("public.track", token=req["token"], _external=True),
+                           email_history=emails.history("request", rid))
 
 
 # ---------------------------------------------------------------- projects
@@ -266,6 +266,19 @@ def projects_list():
         f"SELECT * FROM projects WHERE status IN ({','.join('?' * len(statuses))}) ORDER BY created_at DESC",
         statuses)]
     return render_template("admin/projects.html", rows=rows, tab=tab)
+
+
+def _notify_update(pid, form, image=None, video=None):
+    """Email backers and the requester about a new update, if the admin ticked the box."""
+    if not form.get("notify"):
+        return
+    n = email_followers(pid, "project_update", update_title=form.get("title", "").strip(),
+                        update_body=form.get("body", "").strip(),
+                        update_image_url=abs_url("static", filename=f"uploads/{image}") if image else "",
+                        update_video_url=f"https://youtu.be/{video}" if video else "")
+    flash(f"Update emailed to {n} {'person' if n == 1 else 'people'}." if n else
+          "Update saved. No emails went out (no backers yet, or email isn’t set up — see Admin → Emails).",
+          "success" if n else "info")
 
 
 @bp.route("/projects/<int:pid>", methods=["GET", "POST"])
@@ -308,10 +321,13 @@ def project_detail(pid):
                 stamp_col = {"completed": "completed_at", "funded": "funded_at"}.get(new)
                 execute(f"UPDATE projects SET status=?, updated_at=?{', ' + stamp_col + '=COALESCE(' + stamp_col + ', ?)' if stamp_col else ''} WHERE id=?",
                         (new, now_iso(), now_iso(), pid) if stamp_col else (new, now_iso(), pid))
-                if new == "completed":
-                    email_backers(pid, f"Done! {p['title']} has been cleaned", "project_completed")
-                elif new == "scheduled":
-                    email_backers(pid, f"{p['title']}: clean scheduled", "project_scheduled")
+                key = {"completed": "project_completed", "scheduled": "project_scheduled",
+                       "in_progress": "project_in_progress"}.get(new)
+                wants = f.get("notify") == "1" or not f.get("has_notify")
+                if key and wants and new != p["status"]:
+                    n = email_followers(pid, key)
+                    if n:
+                        flash(f"{n} email{'s' if n != 1 else ''} sent to backers and the requester.", "success")
                 log_activity("status_changed", f"{p['title']} → {new}")
                 flash(f"Status changed to “{STATUS_LABELS.get(new, new)}”.", "success")
 
@@ -338,6 +354,7 @@ def project_detail(pid):
             if saved:
                 log_activity("photos_added", f"{p['title']}: {saved}")
                 flash(f"{saved} photo{'s' if saved != 1 else ''} published to the project page.", "success")
+                _notify_update(pid, f, image=name)
 
         elif action == "add_video":
             vid = youtube_id(f.get("youtube_url"))
@@ -349,14 +366,14 @@ def project_detail(pid):
                         (pid, "video", f.get("phase", "general"), f.get("title", "").strip(),
                          f.get("body", "").strip(), vid))
                 flash("Video added.", "success")
+                _notify_update(pid, f, video=vid)
 
         elif action == "add_note":
             if f.get("body", "").strip():
                 execute("INSERT INTO updates(project_id, kind, phase, title, body) VALUES (?,?,?,?,?)",
                         (pid, "note", f.get("phase", "general"), f.get("title", "").strip(), f["body"].strip()))
-                if f.get("notify"):
-                    email_backers(pid, f"Update: {p['title']}", "project_update")
                 flash("Update posted.", "success")
+                _notify_update(pid, f)
 
         elif action == "delete_update":
             u = query("SELECT * FROM updates WHERE id=? AND project_id=?", (f.get("update_id"), pid), one=True)
@@ -430,7 +447,7 @@ def project_detail(pid):
     return render_template("admin/project_detail.html", p=p, updates=updates, contributions=contributions,
                            project_sponsors=project_sponsors, all_sponsors=all_sponsors,
                            req=req, items_text=line_items_text(p["line_items_list"]),
-                           public_url=project_url(p))
+                           public_url=project_url(p), email_history=emails.history("project", pid))
 
 
 # ---------------------------------------------------------------- sponsors
@@ -580,3 +597,149 @@ def payments_ledger():
                    "GROUP BY status")
     return render_template("admin/payments.html", rows=rows, status=status,
                            totals={t["status"]: t for t in totals})
+
+
+# ---------------------------------------------------------------- emails
+
+
+@bp.route("/emails", methods=["GET", "POST"])
+@login_required
+def emails_list():
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "alerts":
+            raw = request.form.get("admin_notify_email", "")
+            addrs = [a.strip() for a in raw.replace(";", ",").split(",") if a.strip()]
+            bad = [a for a in addrs if not valid_email(a)]
+            if bad:
+                flash(f"Not a valid email address: {bad[0]}", "error")
+            else:
+                set_setting("admin_notify_email", ", ".join(addrs))
+                log_activity("email_alerts_saved", ", ".join(addrs))
+                flash("Team alert addresses saved.", "success")
+        elif action == "toggle" and request.form.get("key") in emails.TEMPLATES:
+            key = request.form["key"]
+            row = emails.override(key)
+            if row:
+                execute("UPDATE email_templates SET enabled=?, updated_at=? WHERE key=?",
+                        (0 if row["enabled"] else 1, now_iso(), key))
+            else:
+                d = emails.TEMPLATES[key]
+                execute("INSERT INTO email_templates(key, subject, html, enabled, updated_by) VALUES (?,?,?,0,?)",
+                        (key, d["subject"], d["html"], g.admin_email))
+            on = emails.source(key)[2]
+            log_activity("email_toggled", f"{key}: {'on' if on else 'off'}")
+            flash(f"“{emails.TEMPLATES[key]['label']}” turned {'on' if on else 'off'}.", "success")
+        return redirect(url_for("admin.emails_list"))
+    status = request.args.get("status", "")
+    rows = []
+    for key, d in emails.TEMPLATES.items():
+        _s, _h, enabled, custom = emails.source(key)
+        rows.append(dict(d, key=key, enabled=enabled, custom=custom))
+    try:
+        sql, args = "SELECT * FROM email_log", ()
+        if status in ("sent", "logged", "failed", "off"):
+            sql, args = sql + " WHERE status=?", (status,)
+        log = query(sql + " ORDER BY id DESC LIMIT 100", args)
+        counts = {r["status"]: r["n"] for r in query("SELECT status, COUNT(*) n FROM email_log GROUP BY status")}
+    except Exception:  # noqa: BLE001
+        log, counts = [], {}
+    from flask import current_app
+    return render_template("admin/emails.html", templates=rows, groups=emails.GROUPS,
+                           layout_custom=emails.source("layout")[3], log=log, counts=counts, status=status,
+                           smtp=bool(current_app.config.get("SMTP_HOST")),
+                           alerts=get_settings().get("admin_notify_email") or "",
+                           env_alerts=current_app.config.get("ADMIN_NOTIFY_EMAIL", ""))
+
+
+def _email_meta(key):
+    if key == "layout":
+        return {"label": "Layout (header and footer)", "group": "All emails",
+                "when": "Wraps every email. Put {{ content }} where each message should appear.",
+                "vars": emails.COMMON_VARS + [("content", "The message itself (required)"),
+                                              ("subject", "The email's subject"),
+                                              ("preheader", "Preview text shown in the inbox")],
+                "subject": "", "html": emails.LAYOUT}
+    if key not in emails.TEMPLATES:
+        abort(404)
+    d = emails.TEMPLATES[key]
+    return dict(d, vars=emails.COMMON_VARS + list(dict.fromkeys(d["vars"])))
+
+
+@bp.route("/emails/<key>", methods=["GET", "POST"])
+@login_required
+def email_edit(key):
+    meta = _email_meta(key)
+    subject, html, enabled, custom = emails.source(key)
+    if request.method == "POST":
+        action = request.form.get("action", "save")
+        new_subject = clean_text(request.form.get("subject"), 200) if key != "layout" else ""
+        new_html = (request.form.get("html") or "").replace("\r\n", "\n")
+        if action == "reset":
+            execute("DELETE FROM email_templates WHERE key=?", (key,))
+            log_activity("email_reset", key)
+            flash("Back to the original wording and design.", "success")
+            return redirect(url_for("admin.email_edit", key=key))
+        error = emails.validate(new_subject, new_html, key)
+        if key != "layout" and not new_subject:
+            error = "The subject can’t be empty."
+        if error:
+            flash(error, "error")
+            return render_template("admin/email_edit.html", key=key, meta=meta, subject=new_subject, html=new_html,
+                                   enabled=enabled, custom=custom), 400
+        if action == "test":
+            ctx = emails.sample_context(key if key != "layout" else "request_received")
+            if key == "layout":
+                d = emails.TEMPLATES["request_received"]
+                parts = emails.render_parts(d["subject"], d["html"], new_html, ctx)
+            else:
+                parts = emails.render_parts(new_subject, new_html, emails.source("layout")[1], ctx)
+            ok = notify.deliver_now(g.admin_email, key, "[Test] " + parts[0], parts[1], parts[2])
+            if ok:
+                flash(f"Test email sent to {g.admin_email} using sample details. It hasn’t been saved yet.", "success")
+            else:
+                flash("Test not sent: email isn’t set up on the server yet (SMTP settings), or the mail server "
+                      "refused it. Check the log at the bottom of Admin → Emails.", "error")
+            return render_template("admin/email_edit.html", key=key, meta=meta, subject=new_subject, html=new_html,
+                                   enabled=enabled, custom=custom)
+        if emails.override(key):
+            execute("UPDATE email_templates SET subject=?, html=?, updated_at=?, updated_by=? WHERE key=?",
+                    (new_subject, new_html, now_iso(), g.admin_email, key))
+        else:
+            execute("INSERT INTO email_templates(key, subject, html, enabled, updated_by) VALUES (?,?,?,1,?)",
+                    (key, new_subject, new_html, g.admin_email))
+        log_activity("email_saved", key)
+        flash("Email saved. It will be used from now on.", "success")
+        return redirect(url_for("admin.email_edit", key=key))
+    return render_template("admin/email_edit.html", key=key, meta=meta, subject=subject, html=html,
+                           enabled=enabled, custom=custom)
+
+
+@bp.route("/emails/<key>/preview", methods=["GET", "POST"])
+@login_required
+def email_preview(key):
+    _email_meta(key)
+    if request.method == "POST":
+        subject_src = request.form.get("subject", "")
+        html_src = request.form.get("html", "")
+    else:
+        subject_src, html_src = emails.source(key)[:2]
+    try:
+        if key == "layout":
+            d = emails.TEMPLATES["request_received"]
+            subject, full, _t = emails.render_parts(d["subject"], d["html"], html_src,
+                                                    emails.sample_context("request_received"))
+        else:
+            subject, full, _t = emails.render_parts(subject_src, html_src, emails.source("layout")[1],
+                                                    emails.sample_context(key))
+        body = (f'<div style="font:13px Arial,sans-serif;background:#fff;border-bottom:1px solid #dfe2e8;'
+                f'padding:10px 16px;color:#5d6585">Subject: <b style="color:#1f2a5c">{escape(subject)}</b></div>' + full)
+    except Exception as exc:  # noqa: BLE001
+        body = (f'<div style="font:15px Arial,sans-serif;padding:24px;color:#b4232a">'
+                f'<b>This template has a problem</b><br>{escape(str(exc))}</div>')
+    resp = Response(body, mimetype="text/html")
+    # The preview shows admin-written HTML: no scripts, no forms, only images and inline styles.
+    resp.headers["Content-Security-Policy"] = ("default-src 'none'; img-src https: http: data:; "
+                                               "style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp

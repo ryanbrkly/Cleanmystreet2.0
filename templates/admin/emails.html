@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+{% set title = 'Emails' %}
+{% block main %}
+<div class="admin-top">
+  <div><h1>Emails</h1><p class="muted" style="margin:4px 0 0">Every email the site sends, when it goes out, and what it looks like. Click an email to edit its wording and HTML design.</p></div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('admin.email_edit', key='layout') }}">Edit header and footer</a>
+</div>
+
+{% if not smtp %}
+<div class="flash flash--error" style="margin-bottom:20px"><b>Emails are not being delivered yet.</b> The server has no mail settings, so messages are only recorded in the log below. Add <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code> and <code>MAIL_FROM</code> to your hosting environment variables, then redeploy.</div>
+{% endif %}
+
+<div class="agrid">
+  <div>
+    {% for group in groups %}
+    <section class="acard">
+      <h2>{{ {'Requester':'To the person who asked for the clean','Backers':'To backers (and the requester)','Team':'To your team'}[group] }}</h2>
+      <div class="table-wrap"><table class="data email-table">
+        <thead><tr><th>Email</th><th>Sent when</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for t in templates if t.group == group %}
+        <tr>
+          <td><a href="{{ url_for('admin.email_edit', key=t.key) }}"><b>{{ t.label }}</b></a>{% if t.custom %}<div class="tiny muted">Customised</div>{% endif %}</td>
+          <td class="small">{{ t.when }}</td>
+          <td><span class="pill {{ 'pill--paid' if t.enabled else 'pill--failed' }}">{{ 'On' if t.enabled else 'Off' }}</span></td>
+          <td><div class="email-actions">
+            <a class="btn btn--ghost btn--sm" href="{{ url_for('admin.email_edit', key=t.key) }}">Edit</a>
+            <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="toggle"><input type="hidden" name="key" value="{{ t.key }}"><button class="link-btn small" type="submit">Turn {{ 'off' if t.enabled else 'on' }}</button></form>
+          </div></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+    {% endfor %}
+  </div>
+  <div>
+    <section class="acard">
+      <h2>Team alerts</h2>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="alerts">
+        <div class="field"><label for="al">Send new-request and funded alerts to</label><input id="al" type="text" name="admin_notify_email" value="{{ alerts }}" placeholder="{{ env_alerts or 'ops@cleanmystreet.co.za' }}"><div class="hint">Separate several addresses with commas.{% if env_alerts and not alerts %} Currently using {{ env_alerts }} from the server settings.{% endif %}</div></div>
+        <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Save</button>
+      </form>
+    </section>
+    <section class="acard">
+      <h2>How editing works</h2>
+      <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:6px">
+        <li>Each email has a subject and an HTML body. Changes apply to the next email sent.</li>
+        <li>Insert details with placeholders like <code>{{ '{{ name }}' }}</code> or <code>{{ '{{ project_url }}' }}</code>. Each email lists the ones it can use.</li>
+        <li><code>{{ '{{ button(project_url, "See the project") }}' }}</code> adds a big button, and <code>{{ '{{ progress(pct) }}' }}</code> a funding bar.</li>
+        <li>“Send test to me” emails you a sample, and “Reset” brings back the original.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<section class="acard" id="log">
+  <h2>Email log <span class="small muted">last 100</span></h2>
+  <nav class="tabs" aria-label="Filter emails" style="margin-bottom:14px">
+    {% for key, label in [('', 'All'), ('sent', 'Sent'), ('logged', 'Not sent'), ('failed', 'Failed'), ('off', 'Turned off')] %}
+    <a href="{{ url_for('admin.emails_list', status=key) if key else url_for('admin.emails_list') }}#log"{% if status == key %} aria-current="page"{% endif %}>{{ label }}{% if key and counts.get(key) %} <span class="count">{{ counts[key] }}</span>{% endif %}</a>
+    {% endfor %}
+  </nav>
+  {% if log %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>When</th><th>To</th><th>Subject</th><th>Status</th><th>About</th></tr></thead>
+    <tbody>{% for e in log %}
+    <tr>
+      <td class="small">{{ e.created_at|nice_datetime }}</td>
+      <td class="small">{{ e.to_addr }}</td>
+      <td class="small">{{ e.subject }}</td>
+      <td><span class="pill pill--mail-{{ e.status }}">{{ {'sent':'Sent','logged':'Not sent','failed':'Failed','off':'Turned off'}.get(e.status, e.status) }}</span>{% if e.error and e.status != 'sent' %}<div class="tiny muted">{{ e.error }}</div>{% endif %}</td>
+      <td class="small">{% if e.ref_type == 'request' and e.ref_id %}<a href="{{ url_for('admin.request_detail', rid=e.ref_id) }}">Request</a>{% elif e.ref_type == 'project' and e.ref_id %}<a href="{{ url_for('admin.project_detail', pid=e.ref_id) }}">Project</a>{% elif e.ref_type == 'test' %}Test{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted" style="margin:0">Nothing here yet.</p>{% endif %}
+</section>
+{% endblock %}

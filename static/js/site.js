@@ -115,6 +115,38 @@
     });
   });
 
+  // Admin email editor: insert placeholders and keep the preview live
+  var lastField = null;
+  document.querySelectorAll("[data-insert-target]").forEach(function (el) {
+    el.addEventListener("focus", function () { lastField = el; });
+  });
+  document.querySelectorAll("[data-insert]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = lastField || document.getElementById("em-html");
+      if (!el) return;
+      var text = btn.getAttribute("data-insert");
+      var start = el.selectionStart || 0, end = el.selectionEnd || 0;
+      el.value = el.value.slice(0, start) + text + el.value.slice(end);
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + text.length;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+  var liveForm = document.querySelector("form[data-live-preview]");
+  if (liveForm) {
+    var timer = null;
+    var refresh = function () {
+      var oldAction = liveForm.getAttribute("action"), oldTarget = liveForm.getAttribute("target");
+      liveForm.setAttribute("action", liveForm.getAttribute("data-live-preview"));
+      liveForm.setAttribute("target", "email-preview");
+      liveForm.submit();
+      if (oldAction === null) liveForm.removeAttribute("action"); else liveForm.setAttribute("action", oldAction);
+      if (oldTarget === null) liveForm.removeAttribute("target"); else liveForm.setAttribute("target", oldTarget);
+    };
+    liveForm.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(refresh, 700); });
+    refresh();
+  }
+
   // Confirm destructive admin actions
   document.querySelectorAll("form[data-confirm]").forEach(function (f) {
     f.addEventListener("submit", function (e) {

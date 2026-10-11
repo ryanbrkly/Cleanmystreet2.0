@@ -5,7 +5,8 @@ from flask import current_app, url_for
 
 from . import notify, payments
 from .db import execute, get_settings, log_activity, now_iso, query
-from .utils import days_left, load_json, make_token, slugify, today_sast
+from .emails import first_name, project_context, request_context
+from .utils import days_left, load_json, make_token, rand, slugify, today_sast
 
 # Public-facing project lifecycle, used by the status bar.
 PHASES = [
@@ -150,8 +151,8 @@ def mark_contribution_paid(contribution_id, payment_id=None):
     execute("UPDATE contributions SET status='paid', payment_id=COALESCE(?, payment_id), paid_at=? WHERE id=?",
             (payment_id, now_iso(), contribution_id))
     project = get_project(c["project_id"])
-    notify.send(c["email"], f"Thank you for backing {project['title']}", "contribution_receipt",
-                c=dict(c), project=project, url=project_url(project))
+    notify.send(c["email"], "contribution_receipt", "project", project["id"], name=first_name(c["name"]),
+                amount=rand(c["amount_cents"]), contribution_id=c["id"], **project_context(project))
 
     # A contribution that lands after a project closed is refunded straight away.
     if project["status"] in ("failed", "cancelled"):
@@ -162,8 +163,9 @@ def mark_contribution_paid(contribution_id, payment_id=None):
         execute("UPDATE projects SET status='funded', funded_at=?, updated_at=? WHERE id=?",
                 (now_iso(), now_iso(), project["id"]))
         log_activity("project_funded", project["title"], admin_email="system")
-        notify.notify_admins(f"Funded: {project['title']}", "admin_funded", project=project)
-        _email_backers(project["id"], f"{project['title']} is fully funded!", "project_funded")
+        project = get_project(project["id"])
+        notify.notify_admins("admin_funded", "project", project["id"], **project_context(project))
+        email_followers(project["id"], "project_funded")
     return True
 
 
@@ -181,8 +183,8 @@ def refund_contribution(contribution_id, reason=""):
     execute("UPDATE contributions SET status=?, refund_id=?, refunded_at=? WHERE id=?",
             (new_status, refund_id, now_iso() if new_status == "refunded" else None, contribution_id))
     project = get_project(c["project_id"])
-    notify.send(c["email"], f"Your refund for {project['title']}", "refund", c=dict(c), project=project,
-                reason=reason)
+    notify.send(c["email"], "refund", "project", project["id"], name=first_name(c["name"]),
+                amount=rand(c["amount_cents"]), contribution_id=c["id"], reason=reason, **project_context(project))
     return True
 
 
@@ -199,6 +201,11 @@ def close_and_refund(project_id, status, reason):
             ok += 1
     log_activity(f"project_{status}", f"project {project_id}: {reason} — {ok}/{len(paid)} refunds issued",
                  admin_email="system")
+    project = get_project(project_id)
+    req = requester_for(project)
+    if project and req:
+        notify.send(req["email"], "project_closed", "project", project_id, reason=reason,
+                    **dict(project_context(project), **request_context(req)))
     return ok, len(paid)
 
 
@@ -222,18 +229,60 @@ def process_expired_projects():
     for row in query("SELECT id FROM contributions WHERE status='refund_pending'"):
         execute("UPDATE contributions SET status='paid' WHERE id=?", (row["id"],))
         refund_contribution(row["id"], reason="Retrying refund")
+    send_deadline_reminders()
     return results
 
 
-def _email_backers(project_id, subject, template):
+def send_deadline_reminders(days=3):
+    """Nudge the requester once when a street is close to its deadline and not yet funded."""
+    sent = 0
+    for row in query("SELECT * FROM projects WHERE status='funding' AND COALESCE(reminder_sent,0)=0"):
+        p = project_view(row)
+        if not (0 <= p["days_left"] <= days) or p["raised_cents"] >= p["goal_cents"]:
+            continue
+        execute("UPDATE projects SET reminder_sent=1 WHERE id=?", (p["id"],))
+        req = requester_for(p)
+        if req and notify.send(req["email"], "deadline_reminder", "project", p["id"],
+                               **dict(project_context(p), **request_context(req))):
+            sent += 1
+    return sent
+
+
+def requester_for(project):
+    if not project or not project.get("request_id"):
+        return None
+    return query("SELECT * FROM requests WHERE id=?", (project["request_id"],), one=True)
+
+
+def followers(project_id):
+    """Everyone who should hear about a project: paid backers plus the person who asked for it."""
     project = get_project(project_id)
-    for c in query("SELECT DISTINCT email, name FROM contributions WHERE project_id=? AND status='paid'",
-                   (project_id,)):
-        notify.send(c["email"], subject, template, c=dict(c), project=project, url=project_url(project))
+    people, seen = [], set()
+    req = requester_for(project)
+    if req:
+        people.append((req["email"], req["requester_name"]))
+    people += [(c["email"], c["name"]) for c in query(
+        "SELECT email, name FROM contributions WHERE project_id=? AND status='paid' ORDER BY id", (project_id,))]
+    out = []
+    for email, name in people:
+        key = (email or "").strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append((email.strip(), name))
+    return project, out
 
 
-def email_backers(project_id, subject, template):
-    _email_backers(project_id, subject, template)
+def email_followers(project_id, key, **extra):
+    project, people = followers(project_id)
+    if not project:
+        return 0
+    ctx = project_context(project)
+    return notify.send_many(key, [(email, dict(ctx, name=first_name(name), **extra)) for email, name in people],
+                            "project", project_id)
+
+
+def email_backers(project_id, key, **extra):  # backwards-compatible name
+    return email_followers(project_id, key, **extra)
 
 
 def project_url(project):

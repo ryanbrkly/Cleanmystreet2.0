@@ -52,6 +52,20 @@ In **demo** payment mode, a striped banner is shown and checkout is a local page
 
 ---
 
+## Emails
+
+Every email the site sends is listed in **Admin → Emails**, grouped by who receives it:
+
+- **Requester:** request received, changes received, more details needed, quote approved (funding link), declined, deadline reminder (3 days before, once), project closed.
+- **Backers and the requester:** contribution receipt, fully funded, clean scheduled, crew on site, completed, project updates (when you tick “Email backers and the requester”), refunds.
+- **Team:** new request and project funded alerts, sent to the addresses under “Team alerts” (or `ADMIN_NOTIFY_EMAIL`).
+
+Each email has an editable subject and HTML body, plus a shared header/footer layout. The editor shows a live preview with sample details, lists the placeholders each email can use (`{{ name }}`, `{{ track_url }}`, `{{ project_url }}` …), and can send you a test. Templates are rendered in a sandbox and values are escaped, so an edited template can’t run code on the server. **Reset to the original** restores the default. Each email can be turned off.
+
+Every attempt is recorded in the email log (Admin → Emails, and on each request and project page) as Sent, Not sent (SMTP not configured), Failed or Turned off.
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` to deliver mail. Optionally set `SITE_URL` (e.g. `https://cleanmystreet.co.za`) for links in emails sent from the command line.
+
 ## Payments (Yoco)
 
 1. In the Yoco portal, copy your **secret key** (`sk_test_…` first, `sk_live_…` when ready).
@@ -148,7 +162,8 @@ cms/
   payments.py     Yoco client + webhook verification
   public.py       public routes, payments, webhook
   admin.py        admin portal routes
-  notify.py       email (SMTP or log)
+  notify.py       email delivery (SMTP or log) and the email log
+  emails.py       editable email templates, defaults and sandboxed rendering
   utils.py        money, dates, YouTube parsing, image uploads, CSRF
   seed.py         demo data
 templates/        public/, admin/, partials/, email/

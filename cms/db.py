@@ -33,6 +33,7 @@ DEFAULT_SETTINGS = {
     "legacy_contributors": "0",
     "announcement": "",
     "service_areas": "Johannesburg, Pretoria, Cape Town, Durban",
+    "admin_notify_email": "",
 }
 
 
@@ -211,6 +212,7 @@ MIGRATIONS = [
     ("sponsors", "offer", "TEXT NOT NULL DEFAULT ''"),
     ("sponsors", "phone", "TEXT NOT NULL DEFAULT ''"),
     ("sponsors", "address", "TEXT NOT NULL DEFAULT ''"),
+    ("projects", "reminder_sent", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

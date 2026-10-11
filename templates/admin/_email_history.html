@@ -1,0 +1,15 @@
+<section class="acard" id="emails">
+  <h2>Emails sent <a class="small" href="{{ url_for('admin.emails_list') }}">Manage emails</a></h2>
+  {% if email_history %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>When</th><th>To</th><th>Email</th><th>Status</th></tr></thead>
+    <tbody>{% for e in email_history %}
+      <tr>
+        <td class="small">{{ e.created_at|nice_datetime }}</td>
+        <td class="small">{{ e.to_addr }}</td>
+        <td class="small">{{ e.subject }}</td>
+        <td><span class="pill pill--mail-{{ e.status }}" title="{{ e.error }}">{{ {'sent':'Sent','logged':'Not sent','failed':'Failed','off':'Turned off'}.get(e.status, e.status) }}</span></td>
+      </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted" style="margin:0">No emails yet.</p>{% endif %}
+</section>

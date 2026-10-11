@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "{cms,templates,static}/**",
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}

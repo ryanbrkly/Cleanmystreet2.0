@@ -16,12 +16,19 @@ def create_app(test_config=None):
                 static_folder="../static", template_folder="../templates")
 
     env = os.environ.get("APP_ENV", "development")
+    # Serverless hosts (Vercel, AWS Lambda) only allow writing to /tmp, and /tmp is
+    # wiped whenever the function restarts. Data there is temporary: fine for a demo,
+    # not for real projects and payments (see README, "Deploying").
+    serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    default_db = "/tmp/cleanmystreet.sqlite3" if serverless else os.path.join(app.instance_path, "cleanmystreet.sqlite3")
+    default_uploads = "/tmp/uploads" if serverless else os.path.join(os.path.dirname(app.root_path), "static", "uploads")
     app.config.from_mapping(
         APP_ENV=env,
+        SERVERLESS=serverless,
+        SEED_DEMO=os.environ.get("SEED_DEMO", "1" if serverless else "0") == "1",
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-only-change-me"),
-        DATABASE=os.environ.get("DATABASE_PATH", os.path.join(app.instance_path, "cleanmystreet.sqlite3")),
-        UPLOAD_FOLDER=os.environ.get("UPLOAD_FOLDER",
-                                     os.path.join(os.path.dirname(app.root_path), "static", "uploads")),
+        DATABASE=os.environ.get("DATABASE_PATH", default_db),
+        UPLOAD_FOLDER=os.environ.get("UPLOAD_FOLDER", default_uploads),
         MAX_CONTENT_LENGTH=25 * 1024 * 1024,
         PUBLIC_BASE_URL=os.environ.get("PUBLIC_BASE_URL", "").rstrip("/"),
         PAYMENT_MODE=os.environ.get("PAYMENT_MODE", "demo"),
@@ -37,20 +44,28 @@ def create_app(test_config=None):
         ADMIN_NOTIFY_EMAIL=os.environ.get("ADMIN_NOTIFY_EMAIL", ""),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=env == "production",
+        SESSION_COOKIE_SECURE=env == "production" or serverless,
         PERMANENT_SESSION_LIFETIME=60 * 60 * 12,
     )
     if test_config:
         app.config.update(test_config)
 
+    # Misconfiguration shows a clear page instead of crashing the whole app.
+    config_errors = []
     if env == "production":
         if app.config["SECRET_KEY"] == "dev-only-change-me":
-            raise RuntimeError("Set SECRET_KEY before running in production.")
+            config_errors.append("SECRET_KEY is not set.")
         if app.config["PAYMENT_MODE"] == "demo":
-            raise RuntimeError("PAYMENT_MODE=demo is not allowed in production. Use PAYMENT_MODE=yoco.")
+            config_errors.append("PAYMENT_MODE is 'demo'. Set PAYMENT_MODE=yoco and your Yoco keys.")
+        if app.config["PAYMENT_MODE"] == "yoco" and not app.config["YOCO_SECRET_KEY"]:
+            config_errors.append("YOCO_SECRET_KEY is not set.")
+    app.config["CONFIG_ERRORS"] = config_errors
 
-    os.makedirs(app.instance_path, exist_ok=True)
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    for folder in (os.path.dirname(app.config["DATABASE"]), app.config["UPLOAD_FOLDER"]):
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except OSError:
+            logging.getLogger(__name__).warning("Could not create %s (read-only filesystem?)", folder)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     logging.basicConfig(level=logging.INFO)
 
@@ -61,6 +76,23 @@ def create_app(test_config=None):
 
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)
+
+    # Uploaded files live in UPLOAD_FOLDER, which may be outside static/ (e.g. /tmp on Vercel).
+    from flask import send_from_directory
+
+    @app.route("/static/uploads/<path:filename>")
+    def uploaded_file(filename):
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename, max_age=86400)
+
+    @app.before_request
+    def _startup_checks():
+        if app.config["CONFIG_ERRORS"] and request.endpoint not in ("static", "public.healthz"):
+            items = "".join(f"<li>{e}</li>" for e in app.config["CONFIG_ERRORS"])
+            return (f"<!doctype html><title>Setup needed</title><body style='font-family:system-ui;padding:40px;max-width:640px'>"
+                    f"<h1>Clean My Street needs a few settings</h1><p>Add these environment variables in your host's "
+                    f"settings, then redeploy:</p><ul>{items}</ul></body>", 503)
+        if not app.config.get("_DB_READY"):
+            _ensure_database(app)
 
     # ------------------------------------------------------------ templates
     app.jinja_env.filters.update(
@@ -157,3 +189,22 @@ def create_app(test_config=None):
         click.echo("Demo data loaded.")
 
     return app
+
+
+def _ensure_database(app):
+    """Create tables on first use; on serverless hosts also load demo data and an admin."""
+    from .db import query
+    try:
+        query("SELECT 1 FROM projects LIMIT 1")
+    except Exception:  # noqa: BLE001 - table missing on a fresh database
+        db.init_db()
+        if app.config["SEED_DEMO"]:
+            from .seed import seed_demo
+            seed_demo()
+    email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+    password = os.environ.get("ADMIN_PASSWORD", "")
+    if email and password and not query("SELECT 1 FROM admins WHERE email=?", (email,), one=True):
+        from werkzeug.security import generate_password_hash
+        db.execute("INSERT INTO admins(email, name, password_hash) VALUES (?,?,?)",
+                   (email, os.environ.get("ADMIN_NAME", "Admin"), generate_password_hash(password)))
+    app.config["_DB_READY"] = True

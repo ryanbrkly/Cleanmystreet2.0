@@ -91,6 +91,21 @@ It also runs whenever an admin opens the dashboard, as a safety net.
 
 ## Deploying
 
+### Vercel (demo only)
+The repo includes `vercel.json` and `api/index.py`, so it deploys to Vercel as-is. Set these environment variables in Vercel → Settings → Environment Variables, then redeploy:
+
+| Variable | Value |
+|---|---|
+| `SECRET_KEY` | a long random string |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | your admin sign-in (created automatically) |
+| `PAYMENT_MODE` | `demo` (leave `APP_ENV` unset) |
+
+**Vercel has no permanent disk.** The app stores its database and uploads in `/tmp`, which Vercel wipes whenever it restarts the function (often within minutes), and each copy of the function has its own data. On Vercel the app therefore reloads the sample projects on every fresh start. Use it to show people the site, not to take real requests or payments.
+
+For the real site use a host with a persistent disk (below), or ask for the Postgres + file-storage version for Vercel.
+
+### Persistent hosts (recommended for the live site)
+
 Any host that runs Python works (Render, Railway, Fly.io, a VPS at Afrihost/Hetzner/xneelo).
 
 - Start command: `gunicorn wsgi:app --workers 2` (see `Procfile`).

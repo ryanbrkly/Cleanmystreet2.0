@@ -1,0 +1,7 @@
+instance
+static/uploads/*.jpg
+static/uploads/*.png
+tests
+__pycache__
+*.pyc
+.env

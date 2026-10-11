@@ -1,0 +1,12 @@
+Hi {{ c.name }},
+
+Thank you for contributing {{ c.amount_cents|rand }} to {{ project.title }}.
+
+The street is now {{ project.pct }}% funded ({{ project.raised_cents|rand }} of {{ project.goal_cents|rand }}).
+
+Your money is ring-fenced for this street. If the goal isn't reached by {{ project.deadline|nice_date }}, you'll be refunded in full automatically.
+
+Follow progress: {{ url }}
+
+Reference: contribution #{{ c.id }}
+Clean My Street (Pty) Ltd

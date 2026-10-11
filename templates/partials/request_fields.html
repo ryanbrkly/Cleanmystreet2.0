@@ -1,0 +1,27 @@
+{% from "partials/ui.html" import field %}
+{# Shared by the new-request form and the revision form. Expects `form` and `errors`. #}
+<fieldset>
+  <legend><span class="num">1</span> The street</legend>
+  <div class="form-grid">
+    <div class="full">{{ field('street_name', 'Street name', errors, form.get('street_name',''), hint='Include the section if it’s a long road, e.g. “between 3rd and 7th Avenue”.') }}</div>
+    {{ field('suburb', 'Suburb', errors, form.get('suburb',''), required=False) }}
+    {{ field('city', 'City or town', errors, form.get('city','')) }}
+    {{ field('postcode', 'Postcode', errors, form.get('postcode',''), attrs='inputmode="numeric" maxlength="4" pattern="[0-9]{4}"') }}
+    <div class="field{% if errors.get('photo') %} has-error{% endif %}">
+      <label for="f-photo">Photo of the problem <span class="muted small">(optional)</span></label>
+      <input id="f-photo" type="file" name="photo" accept="image/*">
+      <div class="hint">A photo helps us quote accurately.</div>
+      {% if errors.get('photo') %}<div class="error">{{ errors.photo }}</div>{% endif %}
+    </div>
+    <div class="full">{{ field('description', 'What needs doing?', errors, form.get('description',''), type='textarea', hint='For example: overgrown verges, blocked drains, sand on the pavement, dumped rubble.') }}</div>
+  </div>
+</fieldset>
+<fieldset>
+  <legend><span class="num">2</span> The service you’d like</legend>
+  {% set pref = form.get('service_pref', 'once') %}
+  <div class="radio-cards">
+    <label><input type="radio" name="service_pref" value="once"{% if pref == 'once' %} checked{% endif %}><span><b>Once-off clean</b>A full reset of the street.</span></label>
+    <label><input type="radio" name="service_pref" value="monthly"{% if pref == 'monthly' %} checked{% endif %}><span><b>Monthly upkeep</b>A regular visit to keep it clean.</span></label>
+    <label><input type="radio" name="service_pref" value="unsure"{% if pref == 'unsure' %} checked{% endif %}><span><b>Not sure yet</b>We’ll quote both options.</span></label>
+  </div>
+</fieldset>

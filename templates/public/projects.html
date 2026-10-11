@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import project_card %}
+{% set title = 'Projects' %}
+{% set description = 'Streets across South Africa raising funds for a professional clean. Find yours and chip in.' %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <h1>Find your street</h1>
+    <p class="lede">{{ stats.active }} street{{ '' if stats.active == 1 else 's' }} raising funds right now. Every contribution is ring-fenced for that street and refunded if its goal isn’t met.</p>
+  </div>
+</section>
+<section class="section" style="padding-top:40px">
+  <div class="wrap">
+    <div class="toolbar">
+      <nav class="tabs" aria-label="Filter projects">
+        {% for key, label in [('open','Raising funds'),('active','Funded & in progress'),('completed','Completed'),('all','All')] %}
+        <a href="{{ url_for('public.projects', status=key, q=q or None) }}"{% if status == key %} aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <form class="search" method="get" role="search">
+        <input type="hidden" name="status" value="{{ status }}">
+        <label class="visually-hidden" for="q">Search by street, suburb or city</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Street, suburb or city">
+        <button class="btn btn--primary btn--sm" type="submit">Search</button>
+      </form>
+    </div>
+    {% if items %}
+      <div class="cards">{% for p in items %}{{ project_card(p) }}{% endfor %}</div>
+    {% else %}
+      <div class="empty">
+        <h3>{% if q %}No projects match “{{ q }}”{% else %}Nothing here yet{% endif %}</h3>
+        <p>Don’t see your street? Request a quote and we’ll set up a funding page within 48 hours.</p>
+        <a class="btn btn--primary" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

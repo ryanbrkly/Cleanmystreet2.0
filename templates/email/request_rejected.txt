@@ -1,0 +1,9 @@
+Hi {{ req.requester_name }},
+
+Thank you for your request {{ req.ref }} for {{ req.street_name }}. Unfortunately we can't take it on at this stage.
+{% if note %}
+Reason: {{ note }}
+{% endif %}
+Details: {{ url }}
+
+Clean My Street

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% set title = 'Terms of use' %}
+{% block main %}
+{# DRAFT: have this reviewed by a South African legal adviser before launch. #}
+<section class="page-head"><div class="wrap"><h1>Terms of use</h1><p class="lede">The rules for requesting cleans and contributing to projects on Clean My Street.</p></div></section>
+<section class="section"><div class="wrap prose">
+  <h2>1. The service</h2>
+  <p>Clean My Street (Pty) Ltd publishes funding pages for street-cleaning projects requested by residents, and carries out the work with its own or contracted crews once a project is funded.</p>
+  <h2>2. Contributions</h2>
+  <ul>
+    <li>Each project has a funding goal, a minimum contribution and a deadline, shown on its page.</li>
+    <li>Contributions are held for that project only and are not pooled with other projects.</li>
+    <li>If the goal is reached by the deadline, contributions are allocated to the project and are not refundable, except where the project is later cancelled by us.</li>
+    <li>If the goal is not reached by the deadline, or the project is cancelled, every contribution is refunded in full to the original payment method.</li>
+    <li>Contributions above the goal are applied to the same street’s project (for example, extra drains or the next maintenance visit) and reported on the project page.</li>
+  </ul>
+  <h2>3. Scope of work</h2>
+  <p>We carry out the work described in the published quote. Weather, safety or access issues may change the date; we’ll notify contributors. Work is done on public road reserves only, and does not include private property.</p>
+  <h2>4. Requests</h2>
+  <p>We may decline or ask for changes to any request, for example where the street is outside our service area or the work requires municipal permission.</p>
+  <h2>5. Content</h2>
+  <p>By uploading photos or messages you confirm you have the right to share them and allow us to publish them on the project page.</p>
+  <h2>6. Liability</h2>
+  <p>To the extent permitted by law, our liability for any claim relating to a project is limited to the amount you contributed to it.</p>
+  <h2>7. Contact</h2>
+  <p><a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></p>
+</div></section>
+{% endblock %}

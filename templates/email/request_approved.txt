@@ -1,0 +1,14 @@
+Hi {{ req.requester_name }},
+
+Good news: your quote for {{ req.street_name }} is approved and your funding page is live.
+
+Funding goal: {{ project.goal_cents|rand }}{% if project.service_type == 'monthly' %} per month{% endif %}
+Minimum per contribution: {{ project.min_contribution_cents|rand }}
+Deadline: {{ project.deadline|nice_date }}
+
+Share this link with your neighbours (your street WhatsApp group works best):
+{{ url }}
+
+If the goal isn't reached by the deadline, everyone is refunded in full automatically.
+
+Clean My Street

@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% set title = 'Requests' %}
+{% block main %}
+<div class="admin-top"><h1>Cleaning requests</h1></div>
+<nav class="tabs" style="margin-bottom:18px" aria-label="Request status">
+  {% for key, label in [('open','To review'),('revision','Waiting on requester'),('approved','Approved'),('rejected','Rejected')] %}
+  <a href="{{ url_for('admin.requests_list', tab=key) }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}<span class="count">{{ counts[key] }}</span></a>
+  {% endfor %}
+</nav>
+<section class="acard">
+  {% if rows %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Ref</th><th>Street</th><th>Requested by</th><th>Service</th><th>Quote</th><th>Status</th><th class="num">Received</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+    <tr>
+      <td><a href="{{ url_for('admin.request_detail', rid=r.id) }}">{{ r.ref }}</a></td>
+      <td>{{ r.street_name }}<div class="tiny muted">{{ r.suburb }} {{ r.city }} {{ r.postcode }}</div></td>
+      <td>{{ r.requester_name }}<div class="tiny muted">{{ r.email }}</div></td>
+      <td>{{ {'once':'Once-off','monthly':'Monthly','unsure':'Either'}[r.service_pref] }}</td>
+      <td>{% if r.has_quote %}<span class="pill pill--approved">Drafted</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td><span class="pill pill--{{ r.status }}">{{ REQUEST_STATUS_LABELS[r.status] }}</span></td>
+      <td class="num">{{ r.created_at|nice_date }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <p class="muted" style="margin:0">No requests in this list.</p>
+  {% endif %}
+</section>
+{% endblock %}

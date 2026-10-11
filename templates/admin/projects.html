@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% from "partials/ui.html" import tape %}
+{% set title = 'Projects' %}
+{% block main %}
+<div class="admin-top"><h1>Projects</h1></div>
+<nav class="tabs" style="margin-bottom:18px" aria-label="Project status">
+  {% for key, label in [('live','Live'),('completed','Completed'),('closed','Failed / cancelled')] %}
+  <a href="{{ url_for('admin.projects_list', tab=key) }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+<section class="acard">
+  {% if rows %}
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>Project</th><th>Type</th><th>Status</th><th style="min-width:150px">Funding</th><th class="num">Budget</th><th class="num">Min.</th><th class="num">Deadline</th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+    <tr>
+      <td><a href="{{ url_for('admin.project_detail', pid=p.id) }}">{{ p.title }}</a><div class="tiny muted">{{ p.location }}</div></td>
+      <td>{{ 'Monthly · #' ~ p.round_no if p.service_type == 'monthly' else 'Once-off' }}</td>
+      <td><span class="pill pill--{{ p.status }}">{{ p.status_label }}</span></td>
+      <td>{{ tape(p.pct, thin=True) }}<div class="tiny muted" style="margin-top:4px">{{ p.raised_cents|rand }} / {{ p.goal_cents|rand }} · {{ p.backers }}</div></td>
+      <td class="num">{{ p.budget_cents|rand }}</td>
+      <td class="num">{{ p.min_contribution_cents|rand }}</td>
+      <td class="num">{{ p.deadline|nice_date }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="muted" style="margin:0">No projects here. Projects are created by approving a request.</p>{% endif %}
+</section>
+{% endblock %}

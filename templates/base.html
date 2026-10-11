@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% set page_title = (title ~ ' — Clean My Street') if title is defined and title else 'Clean My Street — community-funded street cleaning' %}
+  {% set page_desc = description if description is defined and description else 'Neighbours fund a professional clean of their street together. If the goal isn’t reached, every contributor is refunded in full.' %}
+  <title>{{ page_title }}</title>
+  <meta name="description" content="{{ page_desc }}">
+  <link rel="canonical" href="{{ base_url }}{{ request.path }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Clean My Street">
+  <meta property="og:title" content="{{ page_title }}">
+  <meta property="og:description" content="{{ page_desc }}">
+  <meta property="og:url" content="{{ base_url }}{{ request.path }}">
+  <meta property="og:image" content="{{ base_url }}{{ og_image if og_image is defined and og_image else url_for('static', filename='img/gallery/aerial-crew.jpg') }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#1f2a5c">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=1">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+{% if payment_mode == 'demo' %}<div class="demo-banner">Demo mode — payments are simulated and no money moves.</div>{% endif %}
+{% if site.announcement %}<div class="announce">{{ site.announcement }}</div>{% endif %}
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('public.home') }}" aria-label="Clean My Street home">
+      <img src="{{ url_for('static', filename='img/mark.png') }}" alt="" width="50" height="34">
+      <span class="brand-word"><b>CLEAN MY</b><span>STREET</span></span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="nav" id="site-nav" aria-label="Main">
+      {% set ep = request.endpoint or '' %}
+      <a href="{{ url_for('public.projects') }}"{% if ep in ('public.projects','public.project') %} aria-current="page"{% endif %}>Projects</a>
+      <a href="{{ url_for('public.how_it_works') }}"{% if ep == 'public.how_it_works' %} aria-current="page"{% endif %}>How it works</a>
+      <a href="{{ url_for('public.about') }}"{% if ep == 'public.about' %} aria-current="page"{% endif %}>About</a>
+      <a href="{{ url_for('public.sponsors') }}"{% if ep == 'public.sponsors' %} aria-current="page"{% endif %}>Sponsors</a>
+      <a class="btn btn--primary btn--sm" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+{% block main %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="{{ url_for('public.home') }}">
+        <img src="{{ url_for('static', filename='img/mark.png') }}" alt="" width="46" height="31">
+        <span class="brand-word"><b>CLEAN MY</b><span>STREET</span></span>
+      </a>
+      <p>Neighbours fund a professional clean of their own street. Goal reached: we clean. Goal missed: everyone is refunded.</p>
+      <p class="small">Clean My Street (Pty) Ltd<br>Proudly South African</p>
+    </div>
+    <div>
+      <h4>Get involved</h4>
+      <ul>
+        <li><a href="{{ url_for('public.request_clean') }}">Request a clean</a></li>
+        <li><a href="{{ url_for('public.projects') }}">Back a street</a></li>
+        <li><a href="{{ url_for('public.sponsors') }}">Become a sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Learn more</h4>
+      <ul>
+        <li><a href="{{ url_for('public.how_it_works') }}">How it works</a></li>
+        <li><a href="{{ url_for('public.how_it_works') }}#refunds">Refund guarantee</a></li>
+        <li><a href="{{ url_for('public.about') }}">About us</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></li>
+        {% if site.contact_phone %}<li><a href="tel:{{ site.contact_phone|replace(' ', '') }}">{{ site.contact_phone }}</a></li>{% endif %}
+        {% if site.whatsapp_number %}<li><a href="https://wa.me/{{ site.whatsapp_number|replace(' ', '')|replace('+', '') }}">WhatsApp us</a></li>{% endif %}
+        <li>Serving {{ site.service_areas }}</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-base">
+    <div class="wrap">
+      <span>© {{ now_year or 2026 }} Clean My Street (Pty) Ltd. Secure card payments by Yoco.</span>
+      <span><a href="{{ url_for('public.privacy') }}">Privacy (POPIA)</a> &nbsp; <a href="{{ url_for('public.terms') }}">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button class="btn btn--hivis btn--sm lightbox__close" type="button" data-close>Close</button>
+  <figure><img src="" alt=""><p></p></figure>
+</div>
+<script src="{{ url_for('static', filename='js/site.js') }}?v=1" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,3 @@
+{{ project.title }} has reached its goal of {{ project.goal_cents|rand }} with {{ project.backers }} contributors.
+
+Schedule the crew and update the project status in the admin portal.

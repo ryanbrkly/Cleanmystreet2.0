@@ -1,0 +1,10 @@
+Hi {{ name }},
+
+Thanks for asking us to clean {{ street }}. Your reference is {{ ref }}.
+
+Our team will assess the street and send you an itemised quote within 24–48 hours.
+
+Track your request any time (keep this link private):
+{{ url }}
+
+Clean My Street

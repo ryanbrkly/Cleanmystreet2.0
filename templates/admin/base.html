@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{ title ~ ' — ' if title is defined and title else '' }}Admin · Clean My Street</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=1">
+</head>
+<body class="admin-body">
+{% set ep = request.endpoint or '' %}
+<div class="admin-shell">
+  <aside class="admin-side">
+    <a class="brand" href="{{ url_for('admin.dashboard') }}">
+      <img src="{{ url_for('static', filename='img/mark.png') }}" alt="" width="40" height="27">
+      <span class="brand-word"><b>CLEAN MY</b><span>STREET</span></span>
+    </a>
+    <a class="navlink" href="{{ url_for('admin.dashboard') }}"{% if ep == 'admin.dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
+    <a class="navlink" href="{{ url_for('admin.requests_list') }}"{% if ep.startswith('admin.request') %} aria-current="page"{% endif %}>Requests {% if nav_counts.new_requests %}<span class="badge">{{ nav_counts.new_requests }}</span>{% endif %}</a>
+    <a class="navlink" href="{{ url_for('admin.projects_list') }}"{% if ep.startswith('admin.project') %} aria-current="page"{% endif %}>Projects</a>
+    <a class="navlink" href="{{ url_for('admin.payments_ledger') }}"{% if ep == 'admin.payments_ledger' %} aria-current="page"{% endif %}>Payments {% if nav_counts.refunds_pending %}<span class="badge">{{ nav_counts.refunds_pending }}</span>{% endif %}</a>
+    <a class="navlink" href="{{ url_for('admin.sponsors') }}"{% if ep == 'admin.sponsors' %} aria-current="page"{% endif %}>Sponsors</a>
+    <a class="navlink" href="{{ url_for('admin.settings_page') }}"{% if ep == 'admin.settings_page' %} aria-current="page"{% endif %}>Site settings</a>
+    <div class="spacer"></div>
+    <a class="navlink" href="{{ url_for('public.home') }}" target="_blank">View website</a>
+    <form method="post" action="{{ url_for('admin.logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button type="submit">Sign out</button></form>
+  </aside>
+  <main class="admin-main">
+    {% if payment_mode == 'demo' %}<div class="demo-banner" style="border-radius:8px;margin-bottom:16px">Demo payments mode — set PAYMENT_MODE=yoco with your Yoco keys to take real payments.</div>{% endif %}
+    {% from "partials/ui.html" import flashes %}{{ flashes() }}
+    {% block main %}{% endblock %}
+  </main>
+</div>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <button class="btn btn--hivis btn--sm lightbox__close" type="button" data-close>Close</button>
+  <figure><img src="" alt=""><p></p></figure>
+</div>
+<script src="{{ url_for('static', filename='js/site.js') }}?v=1" defer></script>
+</body>
+</html>

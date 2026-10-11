@@ -1,0 +1,7 @@
+Hi {{ c.name }},
+
+The clean for {{ project.title }} is booked{% if project.scheduled_for %} for {{ project.scheduled_for|nice_date }}{% endif %}. Please move cars off the verge on the day if you can.
+
+{{ url }}
+
+Clean My Street

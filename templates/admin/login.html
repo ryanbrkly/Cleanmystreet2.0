@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sign in · Clean My Street admin</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=1">
+</head>
+<body>
+<div class="tape-divider" aria-hidden="true"></div>
+<div class="login-wrap">
+  <form class="login-card" method="post">
+    <span class="brand">
+      <img src="{{ url_for('static', filename='img/mark.png') }}" alt="" width="46" height="31">
+      <span class="brand-word"><b>CLEAN MY</b><span>STREET</span></span>
+    </span>
+    <h1 style="font-size:1.6rem">Team sign in</h1>
+    {% from "partials/ui.html" import flashes %}{{ flashes() }}
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="field" style="margin-bottom:14px"><label for="email">Email</label><input id="email" type="email" name="email" required autocomplete="username" autofocus></div>
+    <div class="field" style="margin-bottom:20px"><label for="password">Password</label><input id="password" type="password" name="password" required autocomplete="current-password"></div>
+    <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>

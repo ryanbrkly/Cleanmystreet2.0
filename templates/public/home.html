@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import icon, tape, project_card, youtube, status_pill %}
+{% block main %}
+
+<section class="hero">
+  <img class="hero__img" src="{{ url_for('static', filename='img/gallery/aerial-crew.jpg') }}" alt="" fetchpriority="high">
+  <div class="wrap">
+    <div>
+      <h1>Clean streets, funded by the people who live on them.</h1>
+      <p class="lede">Ask for a quote for your street, share the funding link with your neighbours, and our trained crew does the rest — verges, drains, pavements and dumped rubble.</p>
+      <div class="hero__ctas">
+        <a class="btn btn--hivis" href="{{ url_for('public.request_clean') }}">Request a clean for your street</a>
+        <a class="btn btn--ghost-light" href="{{ url_for('public.projects') }}">Back a street near you</a>
+      </div>
+      <ul class="hero__promises">
+        <li>{{ icon('shield', 18) }} Full refund if the goal isn’t reached</li>
+        <li>{{ icon('lock', 18) }} Card payments secured by Yoco</li>
+        <li>{{ icon('camera', 18) }} Before-and-after photos for every job</li>
+      </ul>
+    </div>
+    {% if featured %}{% set f = featured[0] %}
+    <a class="hero-card" href="{{ url_for('public.project', slug=f.slug) }}" style="text-decoration:none">
+      <div class="hero-card__top"><span>{{ f.location }}</span>{{ status_pill(f) }}</div>
+      <h3>{{ f.title }}</h3>
+      {{ tape(f.pct) }}
+      <div class="figures">
+        <span><b>{{ f.raised_cents|rand }}</b> raised of {{ f.goal_cents|rand }}</span>
+        <span>{{ f.backers }} neighbours</span>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="numbers" aria-label="Clean My Street in numbers">
+  <div class="wrap">
+    <div><b>{{ stats.streets }}</b><span>streets cleaned</span></div>
+    <div><b>{{ stats.raised_cents|rand }}</b><span>raised by neighbours</span></div>
+    <div><b>{{ stats.contributors }}</b><span>people have chipped in</span></div>
+    <div><b>{{ stats.active }}</b><span>streets raising funds now</span></div>
+  </div>
+</section>
+
+<section class="section" id="how-it-works">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>From messy verge to clean kerb in four steps</h2>
+      <p>You never pay for a clean that doesn’t happen. Money is held for your street only, and returned if the goal isn’t met.</p>
+    </div>
+    <ol class="steps">
+      <li><h3>Request</h3><p>Tell us the street and what needs doing. Add a photo if you can. It takes two minutes and no account.</p></li>
+      <li><h3>Get a quote</h3><p>We assess the job and send a fixed, itemised quote within 48 hours — once-off or monthly upkeep.</p></li>
+      <li><h3>Share and fund</h3><p>Send the funding link to your street WhatsApp group. Each household chips in their share.</p></li>
+      <li><h3>We clean</h3><p>Once funded, the crew is booked within 7 days and posts progress photos on your project page.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--paving">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Streets raising funds now</h2>
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('public.projects') }}">See all projects</a>
+    </div>
+    {% if featured %}
+    <div class="cards">{% for p in featured %}{{ project_card(p) }}{% endfor %}</div>
+    {% else %}
+    <div class="empty">
+      <h3>No streets are raising funds right now</h3>
+      <p>Be the first on your road. Request a quote and we’ll set up a funding page you can share.</p>
+      <a class="btn btn--primary" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if video_id %}
+<section class="section section--ink">
+  <div class="wrap video-block">
+    <div>
+      <h2>{{ site.video_heading }}</h2>
+      <p class="lede" style="color:#c7cde6">{{ site.video_caption }}</p>
+      <a class="btn btn--hivis" href="{{ url_for('public.request_clean') }}">Get a quote for your street</a>
+    </div>
+    {{ youtube(video_id, url_for('static', filename='img/gallery/aerial-sweeper.jpg'), site.video_heading) }}
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Our crews at work</h2>
+      <p>Uniformed, trained teams with safety cones, brush-cutters and power brushes. Every photo here is from a real Clean My Street job.</p>
+    </div>
+    <div class="gallery">
+      {% for name, alt in gallery %}
+      <figure>
+        <button type="button" data-lightbox="{{ url_for('static', filename='img/gallery/' ~ name ~ '.jpg') }}" data-caption="{{ alt }}" aria-label="Enlarge: {{ alt }}">
+          <img src="{{ url_for('static', filename='img/gallery/' ~ name ~ '-sm.jpg') }}" alt="{{ alt }}" loading="lazy">
+        </button>
+        <figcaption>{{ alt }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if completed %}
+<section class="section section--paving">
+  <div class="wrap">
+    <div class="section-head"><h2>Recently completed</h2><a class="btn btn--ghost btn--sm" href="{{ url_for('public.projects', status='completed') }}">All completed streets</a></div>
+    <div class="cards">{% for p in completed %}{{ project_card(p) }}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="wrap mission">
+    <img src="{{ url_for('static', filename='img/gallery/restore-sign.jpg') }}" alt="Clean My Street site sign reading #RestoreOurNeighbourhoods #RestoreOurPropertyValues #ChangeisCOMING, with a crew working behind it" loading="lazy">
+    <div>
+      <blockquote>“The more we neglect what lies beyond our walls, the smaller our space becomes.”</blockquote>
+      <p class="lede">Overgrown verges, blocked drains and sand-covered pavements make streets less safe, flood faster in summer storms and pull property values down. Municipal services are stretched. Clean My Street gives neighbours a simple, transparent way to fix their own street together — and keep it fixed.</p>
+      <a class="btn btn--ghost" href="{{ url_for('public.about') }}">Why we started</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--paving" id="sponsors">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Supported by</h2>
+      <p>Businesses and associations who help cover cleans in their neighbourhoods.</p>
+    </div>
+    <div class="sponsor-grid">
+      {% for s in sponsors %}
+        {% if s.url %}<a class="sponsor" href="{{ s.url }}" target="_blank" rel="noopener" title="{{ s.name }}">{% else %}<div class="sponsor" title="{{ s.name }}">{% endif %}
+          {% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }}" loading="lazy">{% else %}<b>{{ s.name }}</b>{% endif %}
+        {% if s.url %}</a>{% else %}</div>{% endif %}
+      {% endfor %}
+      <a class="sponsor sponsor--join" href="{{ url_for('public.sponsors') }}">Your logo here<span>Sponsor a street in your area</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="tape-divider" aria-hidden="true"></div>
+  <div class="wrap">
+    <div>
+      <h2>Your street could be next</h2>
+      <p>Request a free quote. If your neighbours don’t reach the goal by the deadline, every rand goes back to them automatically.</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn--hivis" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+      <a class="btn btn--ghost-light" href="{{ url_for('public.how_it_works') }}#refunds">How refunds work</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set title = 'Privacy policy' %}
+{% block main %}
+{# DRAFT: have this reviewed by a South African legal adviser before launch. #}
+<section class="page-head"><div class="wrap"><h1>Privacy policy</h1><p class="lede">How Clean My Street (Pty) Ltd collects and uses personal information, in line with the Protection of Personal Information Act (POPIA).</p></div></section>
+<section class="section"><div class="wrap prose">
+  <h2>What we collect</h2>
+  <ul>
+    <li><b>When you request a clean:</b> your name, email, optional phone number, the street details and any photo you upload.</li>
+    <li><b>When you contribute:</b> your name, email, the amount, and an optional message. Card details are entered on Yoco’s secure checkout; we never see or store them.</li>
+    <li><b>When you browse:</b> standard server logs (IP address, browser type) kept for security for up to 30 days.</li>
+  </ul>
+  <h2>Why we use it</h2>
+  <ul>
+    <li>To assess your street, send quotes and keep you updated on your request.</li>
+    <li>To process contributions, send receipts and issue refunds.</li>
+    <li>To email contributors about progress on the projects they support.</li>
+  </ul>
+  <p>We don’t sell or rent personal information, and we don’t send marketing emails without your consent.</p>
+  <h2>What is shown publicly</h2>
+  <p>Project pages show contributors’ names (or “Anonymous” if you choose), the amount, and any message you write. Your email address is never shown. Uploaded photos are re-processed to remove location data.</p>
+  <h2>Who we share it with</h2>
+  <p>Yoco (payment processing), our email provider (to send notifications) and our hosting provider, each bound to protect your information. We share information with authorities only where the law requires it.</p>
+  <h2>How long we keep it</h2>
+  <p>Payment records are kept for five years as required for tax purposes. Request details are kept for as long as the project is active and for two years afterwards.</p>
+  <h2>Your rights</h2>
+  <p>You may ask to see, correct or delete your personal information, or object to how we use it, by emailing <a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a>. You may also complain to the Information Regulator (South Africa) at <a href="https://inforegulator.org.za" rel="noopener">inforegulator.org.za</a>.</p>
+  <h2>Contact</h2>
+  <p>Information Officer, Clean My Street (Pty) Ltd — <a href="mailto:{{ site.contact_email }}">{{ site.contact_email }}</a></p>
+</div></section>
+{% endblock %}

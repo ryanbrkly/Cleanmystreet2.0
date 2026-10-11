@@ -1,0 +1,7 @@
+Hi {{ c.name }},
+
+{{ project.title }} is fully funded — thank you! We're scheduling the crew now and will let you know the date.
+
+{{ url }}
+
+Clean My Street

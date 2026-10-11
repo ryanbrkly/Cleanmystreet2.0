@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% from "partials/ui.html" import youtube %}
+{% set title = 'Site settings' %}
+{% block main %}
+<div class="admin-top"><h1>Site settings</h1></div>
+<form method="post">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<div class="agrid">
+  <div>
+    <section class="acard">
+      <h2>Homepage video</h2>
+      <div class="field" style="margin-bottom:10px"><label for="hv">YouTube link</label><input id="hv" type="url" name="hero_video_url" value="{{ s.hero_video_url }}" placeholder="https://www.youtube.com/watch?v=…"><div class="hint">Paste any YouTube link (watch, youtu.be or Shorts). Leave empty to hide the video section.</div></div>
+      <div class="field" style="margin-bottom:10px"><label for="vh">Heading</label><input id="vh" type="text" name="video_heading" value="{{ s.video_heading }}"></div>
+      <div class="field" style="margin-bottom:14px"><label for="vc">Caption</label><input id="vc" type="text" name="video_caption" value="{{ s.video_caption }}"></div>
+      {% if video_id %}<p class="small muted">Current video preview:</p>{{ youtube(video_id, 'https://i.ytimg.com/vi/' ~ video_id ~ '/hqdefault.jpg') }}{% endif %}
+    </section>
+    <section class="acard">
+      <h2>Announcement bar</h2>
+      <div class="field"><label for="an">Message across the top of every page</label><input id="an" type="text" name="announcement" value="{{ s.announcement }}" placeholder="e.g. Now cleaning streets in Pretoria East"><div class="hint">Leave empty to hide.</div></div>
+    </section>
+    <section class="acard">
+      <h2>Funding defaults</h2>
+      <div class="form-grid">
+        <div class="field"><label for="dm">Default minimum contribution (R)</label><input id="dm" type="text" inputmode="decimal" name="default_min_contribution" value="{{ (s.default_min_contribution_cents|int / 100)|int }}"><div class="hint">Pre-filled when approving a request. Can be changed per project.</div></div>
+        <div class="field"><label for="dd">Default funding window (days)</label><input id="dd" type="number" min="7" max="60" name="default_funding_days" value="{{ s.default_funding_days }}"></div>
+      </div>
+    </section>
+  </div>
+  <div>
+    <section class="acard">
+      <h2>Contact details</h2>
+      <div class="field" style="margin-bottom:10px"><label for="ce">Public email</label><input id="ce" type="email" name="contact_email" value="{{ s.contact_email }}"></div>
+      <div class="field" style="margin-bottom:10px"><label for="cp">Phone</label><input id="cp" type="tel" name="contact_phone" value="{{ s.contact_phone }}"></div>
+      <div class="field" style="margin-bottom:10px"><label for="wa">WhatsApp number</label><input id="wa" type="tel" name="whatsapp_number" value="{{ s.whatsapp_number }}" placeholder="+27 82 000 0000"></div>
+      <div class="field"><label for="sa">Service areas</label><input id="sa" type="text" name="service_areas" value="{{ s.service_areas }}"></div>
+    </section>
+    <section class="acard">
+      <h2>Work done before this platform</h2>
+      <p class="small muted">Added to the live totals on the homepage. Only enter figures you can back up.</p>
+      <div class="field" style="margin-bottom:10px"><label for="ls">Streets cleaned</label><input id="ls" type="number" min="0" name="legacy_streets" value="{{ s.legacy_streets }}"></div>
+      <div class="field" style="margin-bottom:10px"><label for="lr">Rand raised</label><input id="lr" type="text" inputmode="decimal" name="legacy_raised" value="{{ (s.legacy_raised_cents|int / 100)|int }}"></div>
+      <div class="field"><label for="lc">Contributors</label><input id="lc" type="number" min="0" name="legacy_contributors" value="{{ s.legacy_contributors }}"></div>
+    </section>
+  </div>
+</div>
+<button class="btn btn--primary" type="submit">Save settings</button>
+</form>
+{% endblock %}

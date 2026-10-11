@@ -1,0 +1,6 @@
+Hi {{ c.name }},
+
+There's a new update on {{ project.title }}:
+{{ url }}
+
+Clean My Street

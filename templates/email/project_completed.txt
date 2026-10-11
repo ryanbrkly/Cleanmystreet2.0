@@ -1,0 +1,8 @@
+Hi {{ c.name }},
+
+{{ project.title }} has been cleaned. See the before and after photos here:
+{{ url }}
+
+Thank you for making it happen.
+
+Clean My Street

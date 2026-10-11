@@ -1,0 +1,174 @@
+{% extends "admin/base.html" %}
+{% from "partials/ui.html" import tape, phases %}
+{% set title = p.title %}
+{% block main %}
+<div class="admin-top">
+  <div><div class="crumbs"><a href="{{ url_for('admin.projects_list') }}">Projects</a> / {{ p.location }}</div>
+  <h1>{{ p.title }}</h1></div>
+  <div class="actions-row">
+    <button class="btn btn--ghost btn--sm" type="button" data-copy="{{ public_url }}">Copy funding link</button>
+    <a class="btn btn--primary btn--sm" href="{{ public_url }}" target="_blank">View public page</a>
+  </div>
+</div>
+
+<section class="acard">
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center">
+    <div>
+      {{ phases(p) }}
+    </div>
+    <span class="pill pill--{{ p.status }}" style="font-size:.95rem">{{ p.status_label }}</span>
+  </div>
+  <div style="margin-top:22px">{{ tape(p.pct) }}</div>
+  <div class="kpis" style="margin:16px 0 0;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+    <div class="kpi"><b>{{ p.raised_cents|rand }}</b><span>raised of {{ p.goal_cents|rand }}</span></div>
+    <div class="kpi"><b>{{ p.backers }}</b><span>contributors</span></div>
+    <div class="kpi"><b>{{ p.budget_cents|rand }}</b><span>overall budget</span></div>
+    <div class="kpi"><b>{{ p.min_contribution_cents|rand }}</b><span>minimum contribution</span></div>
+    <div class="kpi"><b>{% if p.status == 'funding' %}{{ p.days_left }} days{% else %}{{ p.deadline|nice_date }}{% endif %}</b><span>{{ 'left to deadline' if p.status == 'funding' else 'deadline' }}</span></div>
+  </div>
+</section>
+
+<div class="agrid">
+  <div>
+    {% if p.status not in ('failed', 'cancelled', 'completed') %}
+    <section class="acard">
+      <h2>Move the project forward</h2>
+      <div class="status-steps">
+        {% set moves = [('funded','Mark funded'),('scheduled','Mark clean scheduled'),('in_progress','Start cleaning'),('completed','Mark completed')] %}
+        {% for key, label in moves %}
+          <form method="post"{% if key == 'completed' %} data-confirm="Mark complete and email every contributor?"{% endif %}>
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="set_status"><input type="hidden" name="status" value="{{ key }}">
+            <button class="btn btn--sm {{ 'btn--primary' if (p.status == 'funding' and key == 'funded') or (p.status == 'funded' and key == 'scheduled') or (p.status == 'scheduled' and key == 'in_progress') or (p.status == 'in_progress' and key == 'completed') else 'btn--ghost' }}" type="submit"{% if p.status == key %} disabled{% endif %}>{{ label }}</button>
+          </form>
+        {% endfor %}
+      </div>
+      <p class="tiny muted" style="margin:10px 0 0">Funding is marked automatically when the goal is reached. “Scheduled” and “Completed” email every contributor.{% if p.status == 'funding' and p.raised_cents < p.goal_cents %} Marking funded early means you’ll cover the shortfall of {{ p.remaining_cents|rand }}.{% endif %}</p>
+    </section>
+    {% endif %}
+
+    <section class="acard" id="media">
+      <h2>Progress updates <span class="tiny muted">{{ updates|length }} posted</span></h2>
+      <div class="agrid-2" style="margin-bottom:20px;grid-template-columns:1fr">
+        <form method="post" enctype="multipart/form-data" class="decision">
+          <details open>
+            <summary>Upload photos</summary>
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_photos"><input type="hidden" name="anchor" value="media">
+            <div class="field" style="margin-bottom:10px"><label for="ph">Photos</label><input id="ph" type="file" name="photos" accept="image/*" multiple required></div>
+            <div class="form-grid">
+              <div class="field"><label for="phase1">Stage</label><select id="phase1" name="phase"><option value="before">Before</option><option value="during" selected>During</option><option value="after">After</option><option value="general">General</option></select></div>
+              <div class="field"><label for="pt">Caption</label><input id="pt" type="text" name="title" placeholder="e.g. Drains cleared"></div>
+            </div>
+            <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Publish photos</button>
+          </details>
+        </form>
+        <div class="decision">
+          <details open>
+            <summary>Add a YouTube video</summary>
+            <form method="post">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_video"><input type="hidden" name="anchor" value="media">
+              <div class="field" style="margin-bottom:10px"><label for="yt">YouTube link</label><input id="yt" type="url" name="youtube_url" placeholder="https://youtu.be/…" required></div>
+              <div class="form-grid">
+                <div class="field"><label for="phase2">Stage</label><select id="phase2" name="phase"><option value="before">Before</option><option value="during">During</option><option value="after">After</option><option value="general" selected>General</option></select></div>
+                <div class="field"><label for="vt">Title</label><input id="vt" type="text" name="title"></div>
+              </div>
+              <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Add video</button>
+            </form>
+          </details>
+          <details>
+            <summary>Post a written update</summary>
+            <form method="post">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_note"><input type="hidden" name="anchor" value="media">
+              <div class="field" style="margin-bottom:8px"><label for="nt">Headline</label><input id="nt" type="text" name="title"></div>
+              <div class="field" style="margin-bottom:8px"><label for="nb">Update</label><textarea id="nb" name="body" rows="3" required></textarea></div>
+              <input type="hidden" name="phase" value="general">
+              <label class="check small"><input type="checkbox" name="notify" value="1"> <span>Email all contributors</span></label>
+              <button class="btn btn--primary btn--sm" type="submit" style="margin-top:10px">Post update</button>
+            </form>
+          </details>
+        </div>
+      </div>
+      {% if updates %}
+      <div class="thumbs">
+        {% for u in updates %}
+        <div class="thumb">
+          {% if u.kind == 'photo' %}<button type="button" style="all:unset;cursor:zoom-in;display:block" data-lightbox="{{ url_for('static', filename='uploads/' ~ u.image) }}" data-caption="{{ u.title }}"><img src="{{ url_for('static', filename='uploads/' ~ u.image) }}" alt="{{ u.title }}" loading="lazy"></button>
+          {% elif u.kind == 'video' %}<a class="yt-thumb" href="https://youtu.be/{{ u.youtube_id }}" target="_blank" rel="noopener" style="display:block"><img src="https://i.ytimg.com/vi/{{ u.youtube_id }}/mqdefault.jpg" alt="{{ u.title }}" loading="lazy"></a>
+          {% else %}<div class="note"><b>{{ u.title }}</b><br>{{ u.body|truncate(90) }}</div>{% endif %}
+          <div class="meta"><span><span class="pill">{{ u.phase }}</span></span>
+            <form method="post" data-confirm="Remove this update from the public page?"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_update"><input type="hidden" name="update_id" value="{{ u.id }}"><input type="hidden" name="anchor" value="media"><button class="link-btn tiny" type="submit" style="color:var(--danger)">Remove</button></form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="acard" id="contributions">
+      <h2>Contributions <a class="small" href="{{ url_for('admin.payments_ledger') }}">Full ledger</a></h2>
+      {% if contributions %}
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Contributor</th><th class="num">Amount</th><th>Status</th><th>Date</th><th></th></tr></thead>
+        <tbody>{% for c in contributions %}
+        <tr>
+          <td><b>{{ c.name }}</b>{% if c.anonymous %} <span class="tiny muted">(anonymous)</span>{% endif %}<div class="tiny muted">{{ c.email }}</div></td>
+          <td class="num">{{ c.amount_cents|rand }}</td>
+          <td><span class="pill pill--{{ c.status }}">{{ c.status|replace('_',' ') }}</span></td>
+          <td class="small">{{ (c.paid_at or c.created_at)|nice_datetime }}</td>
+          <td>{% if c.status == 'paid' %}
+            <form method="post" data-confirm="Refund {{ c.amount_cents|rand }} to {{ c.name }}?"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="refund"><input type="hidden" name="contribution_id" value="{{ c.id }}"><input type="hidden" name="anchor" value="contributions"><button class="link-btn small" type="submit">Refund</button></form>
+          {% endif %}</td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<p class="muted" style="margin:0">No contributions yet. Share the funding link with the requester’s street.</p>{% endif %}
+    </section>
+  </div>
+
+  <div>
+    <section class="acard">
+      <h2>Budget and funding rules</h2>
+      <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save_details">
+        <div class="field" style="margin-bottom:10px"><label for="tt">Title</label><input id="tt" type="text" name="title" value="{{ p.title }}"></div>
+        <div class="form-grid">
+          <div class="field"><label for="g">Funding goal (R)</label><input id="g" type="text" inputmode="decimal" name="goal_amount" value="{{ (p.goal_cents / 100)|int }}"></div>
+          <div class="field"><label for="b">Overall budget (R)</label><input id="b" type="text" inputmode="decimal" name="budget_amount" value="{{ (p.budget_cents / 100)|int }}"></div>
+          <div class="field"><label for="m">Minimum contribution (R)</label><input id="m" type="text" inputmode="decimal" name="min_contribution" value="{{ (p.min_contribution_cents / 100)|int }}"></div>
+          <div class="field"><label for="d">Deadline</label><input id="d" type="date" name="deadline" value="{{ p.deadline }}"></div>
+          <div class="field full"><label for="sf">Clean scheduled for</label><input id="sf" type="date" name="scheduled_for" value="{{ p.scheduled_for or '' }}"></div>
+        </div>
+        {% if p.budget_cents > p.goal_cents %}<p class="flash flash--info small" style="margin:12px 0 0">Budget is {{ (p.budget_cents - p.goal_cents)|rand }} above the funding goal — the difference must come from sponsors or margin.</p>{% endif %}
+        <div class="field" style="margin:12px 0 10px"><label for="su">Public summary</label><textarea id="su" name="summary" rows="3">{{ p.summary }}</textarea></div>
+        <div class="field" style="margin-bottom:10px"><label for="sc">Scope of work</label><textarea id="sc" name="scope" rows="3">{{ p.scope }}</textarea></div>
+        <div class="field" style="margin-bottom:10px"><label for="lt">Quote line items</label><textarea id="lt" name="line_items" rows="5">{{ items_text }}</textarea><div class="hint"><code>Description | amount</code> per line.</div></div>
+        <div class="field" style="margin-bottom:12px"><label for="cv">Cover photo</label>{% if p.cover_image %}<img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="" style="border-radius:6px;margin-bottom:8px;max-height:140px">{% endif %}<input id="cv" type="file" name="cover" accept="image/*"></div>
+        <button class="btn btn--primary btn--sm" type="submit">Save changes</button>
+      </form>
+    </section>
+
+    {% if p.service_type == 'monthly' and p.status in ('funded', 'scheduled', 'in_progress', 'completed') %}
+    <section class="acard"><h2>Monthly upkeep</h2>
+      <p class="small">Open month {{ p.round_no + 1 }} with the same quote and rules. Contributors to previous months can be invited by email from the new page.</p>
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="next_round"><button class="btn btn--primary btn--sm" type="submit">Open next month’s round</button></form>
+    </section>
+    {% endif %}
+
+    {% if req %}
+    <section class="acard"><h2>Original request</h2>
+      <p class="small"><a href="{{ url_for('admin.request_detail', rid=req.id) }}">{{ req.ref }}</a> by {{ req.requester_name }} · <a href="mailto:{{ req.email }}">{{ req.email }}</a></p>
+    </section>
+    {% endif %}
+
+    {% if p.status not in ('failed', 'cancelled', 'completed') %}
+    <section class="acard" style="border-color:#f1c4c6">
+      <h2>Cancel project</h2>
+      <p class="small">Closes the page and refunds every paid contribution in full through Yoco.</p>
+      <form method="post" data-confirm="Cancel this project and refund all {{ p.backers }} contributors? This can’t be undone.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="cancel">
+        <div class="field" style="margin-bottom:10px"><label for="rs">Reason (shown publicly and emailed)</label><input id="rs" type="text" name="reason" placeholder="e.g. The municipality cleaned the street"></div>
+        <button class="btn btn--danger btn--sm" type="submit">Cancel and refund everyone</button>
+      </form>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

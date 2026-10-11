@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% from "partials/ui.html" import tape %}
+{% set title = 'Dashboard' %}
+{% block main %}
+<div class="admin-top"><div><h1>Good day{% if g.admin.name %}, {{ g.admin.name.split(' ')[0] }}{% endif %}</h1><p class="muted" style="margin:4px 0 0">Here’s what needs your attention.</p></div>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('admin.requests_list') }}">Review requests</a></div>
+
+<div class="kpis">
+  <a class="kpi{% if kpi.new_requests %} kpi--alert{% endif %}" href="{{ url_for('admin.requests_list') }}"><b>{{ kpi.new_requests }}</b><span>requests to review</span></a>
+  <a class="kpi" href="{{ url_for('admin.requests_list', tab='revision') }}"><b>{{ kpi.revisions }}</b><span>waiting on requester</span></a>
+  <a class="kpi" href="{{ url_for('admin.projects_list') }}"><b>{{ kpi.funding }}</b><span>raising funds</span></a>
+  <a class="kpi{% if kpi.to_schedule %} kpi--alert{% endif %}" href="{{ url_for('admin.projects_list') }}"><b>{{ kpi.to_schedule }}</b><span>funded, to schedule or finish</span></a>
+  <a class="kpi" href="{{ url_for('admin.payments_ledger') }}"><b>{{ kpi.raised_30|rand }}</b><span>raised in last 30 days</span></a>
+  <a class="kpi{% if kpi.refunds_pending %} kpi--alert{% endif %}" href="{{ url_for('admin.payments_ledger', status='refund_pending') }}"><b>{{ kpi.refunds_pending }}</b><span>refunds needing attention</span></a>
+</div>
+
+<div class="agrid">
+  <div>
+    <section class="acard">
+      <h2>Live projects <a class="small" href="{{ url_for('admin.projects_list') }}">All projects</a></h2>
+      {% if live %}
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Project</th><th>Status</th><th style="min-width:140px">Funding</th><th class="num">Deadline</th></tr></thead>
+        <tbody>
+        {% for p in live %}
+        <tr>
+          <td><a href="{{ url_for('admin.project_detail', pid=p.id) }}">{{ p.title }}</a><div class="tiny muted">{{ p.location }}{% if p.service_type == 'monthly' %} · monthly{% endif %}</div></td>
+          <td><span class="pill pill--{{ p.status }}">{{ p.status_label }}</span></td>
+          <td>{{ tape(p.pct, thin=True) }}<div class="tiny muted" style="margin-top:4px">{{ p.raised_cents|rand }} / {{ p.goal_cents|rand }}</div></td>
+          <td class="num">{% if p.status == 'funding' %}{{ p.days_left }} days{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<p class="muted">No live projects. Approve a request to publish one.</p>{% endif %}
+    </section>
+
+    <section class="acard">
+      <h2>Review queue <a class="small" href="{{ url_for('admin.requests_list') }}">All requests</a></h2>
+      {% if queue %}
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Ref</th><th>Street</th><th>Service</th><th class="num">Received</th></tr></thead>
+        <tbody>{% for r in queue %}
+          <tr><td><a href="{{ url_for('admin.request_detail', rid=r.id) }}">{{ r.ref }}</a></td><td>{{ r.street_name }}<div class="tiny muted">{{ r.suburb }} {{ r.city }}</div></td><td>{{ {'once':'Once-off','monthly':'Monthly','unsure':'Either'}[r.service_pref] }}</td><td class="num">{{ r.created_at|nice_date }}</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}<p class="muted">You’re all caught up.</p>{% endif %}
+    </section>
+  </div>
+  <div>
+    <section class="acard">
+      <h2>Recent contributions</h2>
+      {% if recent %}
+      <table class="data"><tbody>{% for c in recent %}
+        <tr><td><b>{{ c.name }}</b><div class="tiny muted">{{ c.title }}</div></td><td class="num">{{ c.amount_cents|rand }}<div><span class="pill pill--{{ c.status }}">{{ c.status|replace('_',' ') }}</span></div></td></tr>
+      {% endfor %}</tbody></table>
+      {% else %}<p class="muted">No contributions yet.</p>{% endif %}
+    </section>
+    <section class="acard">
+      <h2>Activity</h2>
+      {% if activity %}
+      <ul style="list-style:none;padding:0;margin:0;display:grid;gap:10px;font-size:.88rem">
+        {% for a in activity %}<li><b>{{ a.action|replace('_',' ')|capitalize }}</b> {{ a.detail }}<div class="tiny muted">{{ a.admin_email }} · {{ a.created_at|nice_datetime }}</div></li>{% endfor %}
+      </ul>
+      {% else %}<p class="muted">Nothing yet.</p>{% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

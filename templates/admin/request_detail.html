@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% set title = req.ref %}
+{% block main %}
+<div class="admin-top">
+  <div><div class="crumbs"><a href="{{ url_for('admin.requests_list') }}">Requests</a> / {{ req.ref }}</div>
+  <h1>{{ req.street_name }}</h1></div>
+  <span class="pill pill--{{ req.status }}" style="font-size:.95rem">{{ REQUEST_STATUS_LABELS[req.status] }}</span>
+</div>
+
+<div class="agrid">
+  <div>
+    <section class="acard">
+      <h2>Request details</h2>
+      <dl class="kv">
+        <dt>Location</dt><dd>{{ req.street_name }}, {{ req.suburb }} {{ req.city }} {{ req.postcode }} · <a href="https://www.google.com/maps/search/{{ (req.street_name ~ ', ' ~ req.suburb ~ ', ' ~ req.city)|urlencode }}" target="_blank" rel="noopener">Open in Maps</a></dd>
+        <dt>Service wanted</dt><dd>{{ {'once':'Once-off clean','monthly':'Monthly upkeep','unsure':'Not sure — quote both'}[req.service_pref] }}</dd>
+        <dt>Funding window</dt><dd>{{ req.funding_days }} days</dd>
+        <dt>Requested by</dt><dd>{{ req.requester_name }} · <a href="mailto:{{ req.email }}">{{ req.email }}</a>{% if req.phone %} · <a href="tel:{{ req.phone }}">{{ req.phone }}</a>{% endif %}</dd>
+        <dt>Received</dt><dd>{{ req.created_at|nice_datetime }}{% if req.updated_at != req.created_at %} · updated {{ req.updated_at|nice_datetime }}{% endif %}</dd>
+        <dt>Tracking link</dt><dd><button type="button" class="link-btn" data-copy="{{ track_url }}">Copy requester’s link</button></dd>
+      </dl>
+      <h3 style="margin-top:18px;font-size:1rem">Description</h3>
+      <p style="white-space:pre-line">{{ req.description }}</p>
+      {% if req.photo %}
+      <button type="button" style="all:unset;cursor:zoom-in" data-lightbox="{{ url_for('static', filename='uploads/' ~ req.photo) }}" data-caption="Photo from requester">
+        <img src="{{ url_for('static', filename='uploads/' ~ req.photo) }}" alt="Photo from requester" style="max-height:280px;border-radius:8px">
+      </button>
+      {% endif %}
+      {% if req.admin_note %}<div class="flash flash--info" style="margin-top:16px"><b>Last message to requester:</b> {{ req.admin_note }}</div>{% endif %}
+    </section>
+
+    <section class="acard" id="quote">
+      <h2>Quote {% if quote %}<span class="tiny muted">saved {{ quote.updated_at|nice_datetime }}</span>{% endif %}</h2>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="save_quote">
+        <div class="form-grid">
+          <div class="full field">
+            <label for="li">Line items</label>
+            <textarea id="li" name="line_items" rows="6" placeholder="Verge brush-cutting (both sides) | 5200&#10;Storm-water drain clearing (6 drains) | 4800&#10;Debris removal and dumping fees | 3000">{{ items_text }}</textarea>
+            <div class="hint">One item per line: <code>Description | amount in rand</code>. The once-off total is calculated from these if you leave it blank.</div>
+          </div>
+          <div class="field"><label for="once">Once-off price (R)</label><input id="once" type="text" inputmode="decimal" name="once_amount" value="{{ (quote.once_cents / 100)|int if quote and quote.once_cents else '' }}"></div>
+          <div class="field"><label for="monthly">Monthly upkeep price (R)</label><input id="monthly" type="text" inputmode="decimal" name="monthly_amount" value="{{ (quote.monthly_cents / 100)|int if quote and quote.monthly_cents else '' }}"><div class="hint">Leave blank if not offered.</div></div>
+          <div class="full field"><label for="scope">Scope of work (shown publicly)</label><textarea id="scope" name="scope" rows="3">{{ quote.scope if quote else '' }}</textarea></div>
+        </div>
+        <button class="btn btn--primary btn--sm" type="submit" style="margin-top:14px">Save quote</button>
+      </form>
+    </section>
+  </div>
+
+  <div>
+    {% if req.status in ('submitted', 'under_review') %}
+    <section class="acard">
+      <h2>Decision</h2>
+      <div class="decision">
+        <details open>
+          <summary>Approve and publish funding page</summary>
+          {% if not quote %}<p class="muted small">Save a quote first.</p>{% else %}
+          <form method="post">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="approve">
+            <div class="field" style="margin-bottom:10px"><label for="t">Project title</label><input id="t" type="text" name="title" value="{{ req.street_name }}{% if req.suburb %}, {{ req.suburb }}{% endif %}"></div>
+            <div class="field" style="margin-bottom:10px"><label for="sm">Public summary</label><textarea id="sm" name="summary" rows="3">{{ req.description }}</textarea></div>
+            <span class="label">Pricing tier to fund</span>
+            <div class="radio-cards" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+              <label><input type="radio" name="service_type" value="once" {% if req.service_pref != 'monthly' or not quote.monthly_cents %}checked{% endif %}{% if not quote.once_cents %} disabled{% endif %}><span><b>Once-off</b>{{ quote.once_cents|rand if quote.once_cents else 'not quoted' }}</span></label>
+              <label><input type="radio" name="service_type" value="monthly" {% if req.service_pref == 'monthly' and quote.monthly_cents %}checked{% endif %}{% if not quote.monthly_cents %} disabled{% endif %}><span><b>Monthly</b>{{ (quote.monthly_cents|rand ~ ' / month') if quote.monthly_cents else 'not quoted' }}</span></label>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label for="goal">Funding goal (R)</label><input id="goal" type="text" inputmode="decimal" name="goal_amount" placeholder="Defaults to the quote"><div class="hint">What neighbours must raise.</div></div>
+              <div class="field"><label for="budget">Overall budget (R)</label><input id="budget" type="text" inputmode="decimal" name="budget_amount" placeholder="Defaults to goal"><div class="hint">Internal cost to deliver.</div></div>
+              <div class="field"><label for="minc">Minimum contribution (R)</label><input id="minc" type="text" inputmode="decimal" name="min_contribution" value="{{ (settings.default_min_contribution_cents|int / 100)|int }}"><div class="hint">Per household / street owner.</div></div>
+              <div class="field"><label for="days">Funding window</label><select id="days" name="funding_days">{% for d in (7, 14, 21, 30, 45) %}<option value="{{ d }}"{% if d == req.funding_days %} selected{% endif %}>{{ d }} days</option>{% endfor %}</select></div>
+            </div>
+            <button class="btn btn--primary btn--block" type="submit" style="margin-top:14px">Approve and publish</button>
+            <p class="tiny muted" style="margin:8px 0 0">The requester is emailed the funding link.</p>
+          </form>
+          {% endif %}
+        </details>
+        <details>
+          <summary>Request revisions</summary>
+          <form method="post">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="revise">
+            <div class="field"><label for="rn">What should the requester change or add?</label><textarea id="rn" name="note" rows="3" required placeholder="e.g. Please confirm which section of the road and add a photo of the drains."></textarea></div>
+            <button class="btn btn--ghost btn--sm" type="submit" style="margin-top:10px">Send revision request</button>
+          </form>
+        </details>
+        <details>
+          <summary>Reject</summary>
+          <form method="post" data-confirm="Reject this request and notify the requester?">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="reject">
+            <div class="field"><label for="jn">Reason (sent to requester)</label><textarea id="jn" name="note" rows="3" placeholder="e.g. This street is outside our current service area."></textarea></div>
+            <button class="btn btn--danger btn--sm" type="submit" style="margin-top:10px">Reject request</button>
+          </form>
+        </details>
+      </div>
+    </section>
+    {% elif req.status == 'approved' and req.project_id %}
+    <section class="acard"><h2>Approved</h2><p>This request is live as a project.</p><a class="btn btn--primary btn--sm" href="{{ url_for('admin.project_detail', pid=req.project_id) }}">Open project</a></section>
+    {% else %}
+    <section class="acard"><h2>{{ REQUEST_STATUS_LABELS[req.status] }}</h2>
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="reopen"><button class="btn btn--ghost btn--sm" type="submit">Reopen for review</button></form>
+    </section>
+    {% endif %}
+
+    <section class="acard">
+      <h2>Internal note</h2>
+      <form method="post">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="internal_note">
+        <textarea name="internal_note" rows="3" aria-label="Internal note" placeholder="Only visible to the team">{{ req.internal_note }}</textarea>
+        <button class="btn btn--ghost btn--sm" type="submit" style="margin-top:10px">Save note</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

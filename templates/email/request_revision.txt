@@ -1,0 +1,10 @@
+Hi {{ req.requester_name }},
+
+We need a few more details before we can quote for {{ req.street_name }} ({{ req.ref }}):
+
+{{ note }}
+
+Update your request here:
+{{ url }}
+
+Clean My Street

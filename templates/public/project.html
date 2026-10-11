@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import icon, tape, phases, status_pill, youtube, flashes %}
+{% set title = p.title %}
+{% set description = p.summary ~ ' ' ~ p.pct ~ '% funded — ' ~ (p.raised_cents|rand) ~ ' of ' ~ (p.goal_cents|rand) ~ '.' %}
+{% set og_image = url_for('static', filename='uploads/' ~ p.cover_image) if p.cover_image else None %}
+{% set share_url = base_url ~ url_for('public.project', slug=p.slug) %}
+{% set share_text = 'Help clean ' ~ p.street_name ~ '! We\'re ' ~ p.pct ~ '% of the way there. Every household chipping in gets it done — and if we don\'t reach the goal, everyone is refunded: ' ~ share_url %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <div class="crumbs"><a href="{{ url_for('public.projects') }}">Projects</a> / {{ p.location }}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      {{ status_pill(p) }}
+      <span class="pill {{ 'pill--monthly' if p.service_type == 'monthly' else '' }}">{{ 'Monthly upkeep' ~ (' · month ' ~ p.round_no if p.round_no > 1 else '') if p.service_type == 'monthly' else 'Once-off clean' }}</span>
+    </div>
+    <h1>{{ p.title }}</h1>
+    <p class="lede" style="display:flex;gap:8px;align-items:center">{{ icon('pin', 20) }} {{ p.street_name }}{% if p.location %}, {{ p.location }}{% endif %}</p>
+    <div style="margin-top:32px">{{ phases(p) }}</div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:40px">
+  <div class="wrap">
+    {{ flashes() }}
+    <div class="proj-grid">
+      <div>
+        {% if p.cover_image %}<img class="proj-cover" src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="{{ p.street_name }}">{% endif %}
+
+        {% if p.status in ('failed', 'cancelled') %}
+        <div class="flash flash--info" style="margin-bottom:28px">
+          {% if p.status == 'failed' %}This street didn’t reach its goal by {{ p.deadline|nice_date }}. Every contributor has been refunded in full.{% else %}This project was cancelled{% if p.closed_reason %} ({{ p.closed_reason }}){% endif %}. Every contributor has been refunded in full.{% endif %}
+        </div>
+        {% endif %}
+
+        <h2>What we’ll do</h2>
+        <p class="lede">{{ p.summary }}</p>
+        {% if p.scope %}<p>{{ p.scope }}</p>{% endif %}
+
+        {% if p.line_items_list %}
+        <h3 style="margin-top:32px">The quote</h3>
+        <table class="quote-table">
+          {% for item in p.line_items_list %}
+          <tr><td>{{ item.label }}</td><td>{{ item.cents|rand if item.cents else '' }}</td></tr>
+          {% endfor %}
+          <tr class="total"><td>Funding goal{% if p.service_type == 'monthly' %} per month{% endif %}</td><td>{{ p.goal_cents|rand }}</td></tr>
+        </table>
+        <p class="small muted" style="margin-top:10px">All prices include VAT where applicable, labour, equipment, traffic safety and legal disposal of waste.</p>
+        {% endif %}
+
+        <h2 style="margin-top:56px">Progress updates</h2>
+        {% if updates %}
+          {% set phases_present = updates|map(attribute='phase')|unique|list %}
+          {% if phases_present|length > 1 %}
+          <div class="feed-filter" role="group" aria-label="Filter updates">
+            <button type="button" data-phase="all" aria-pressed="true">All</button>
+            {% for ph in ('before', 'during', 'after') if ph in phases_present %}<button type="button" data-phase="{{ ph }}" aria-pressed="false">{{ ph|capitalize }}</button>{% endfor %}
+          </div>
+          {% endif %}
+          <div class="feed">
+            {% for u in updates %}
+            <article class="feed-item" data-phase="{{ u.phase }}">
+              <div class="feed-item__when">{{ u.created_at|nice_datetime }}{% if u.phase != 'general' %}<br><span class="pill" style="margin-top:6px">{{ u.phase|capitalize }}</span>{% endif %}</div>
+              <div>
+                {% if u.title %}<h3 style="margin-bottom:6px">{{ u.title }}</h3>{% endif %}
+                {% if u.body %}<p style="margin:0">{{ u.body }}</p>{% endif %}
+                {% if u.kind == 'photo' and u.image %}
+                  {% set src = url_for('static', filename='uploads/' ~ u.image) %}
+                  <button type="button" class="link-btn" style="all:unset;display:block;cursor:zoom-in" data-lightbox="{{ src }}" data-caption="{{ u.title }}" aria-label="Enlarge photo{% if u.title %}: {{ u.title }}{% endif %}">
+                    <img src="{{ src }}" alt="{{ u.title or 'Progress photo' }}" loading="lazy">
+                  </button>
+                {% elif u.kind == 'video' and u.youtube_id %}
+                  <div style="margin-top:8px">{{ youtube(u.youtube_id, 'https://i.ytimg.com/vi/' ~ u.youtube_id ~ '/hqdefault.jpg', u.title or 'Play video') }}</div>
+                {% endif %}
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty"><h3>No updates yet</h3><p>Photos and videos are posted here before, during and after the clean.</p></div>
+        {% endif %}
+      </div>
+
+      <aside class="proj-aside">
+        <div class="panel" id="contribute">
+          <div class="raised">{{ p.raised_cents|rand }}</div>
+          <div class="muted" style="margin:4px 0 14px">raised of {{ p.goal_cents|rand }} goal{% if p.service_type == 'monthly' %} this month{% endif %}</div>
+          {{ tape(p.pct) }}
+          <div class="fund-figs">
+            <div><b>{{ p.pct }}%</b><span>funded</span></div>
+            <div><b>{{ p.backers }}</b><span>neighbours</span></div>
+            <div>{% if p.status == 'funding' %}<b>{{ [p.days_left, 0]|max }}</b><span>days left</span>{% else %}<b>{{ p.remaining_cents|rand if p.remaining_cents else '✓' }}</b><span>{{ 'to go' if p.remaining_cents else 'goal met' }}</span>{% endif %}</div>
+          </div>
+
+          {% if p.is_open_for_funding %}
+          <form method="post" action="{{ url_for('public.contribute', slug=p.slug) }}" style="margin-top:22px">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <span class="label" id="amt-label">Your contribution</span>
+            <div class="amounts" role="radiogroup" aria-labelledby="amt-label">
+              {% for v in presets %}
+              <label><input type="radio" name="amount" value="{{ v / 100 }}" {% if loop.index == 2 %}checked{% endif %}><span>{{ v|rand }}</span></label>
+              {% endfor %}
+            </div>
+            <div class="field" style="margin-bottom:14px">
+              <label for="amount_custom" class="small">Or enter another amount (R)</label>
+              <input id="amount_custom" type="number" name="amount_custom" min="{{ p.min_contribution_cents / 100 }}" step="1" inputmode="numeric" placeholder="Minimum {{ p.min_contribution_cents|rand }}">
+            </div>
+            <div class="field" style="margin-bottom:12px"><label for="c-name">Your name</label><input id="c-name" type="text" name="name" required autocomplete="name"></div>
+            <div class="field" style="margin-bottom:12px"><label for="c-email">Email</label><input id="c-email" type="email" name="email" required autocomplete="email"><div class="hint">For your receipt, progress updates and any refund.</div></div>
+            <div class="field" style="margin-bottom:12px"><label for="c-msg">Message to your neighbours <span class="muted small">(optional)</span></label><input id="c-msg" type="text" name="message" maxlength="280"></div>
+            <label class="check" style="margin-bottom:8px"><input type="checkbox" name="anonymous" value="1"> <span>Show me as “Anonymous” on this page</span></label>
+            <label class="check" style="margin-bottom:18px"><input type="checkbox" name="agree" value="1" required> <span>I agree to the <a href="{{ url_for('public.terms') }}" target="_blank">terms</a> and understand I’ll be refunded in full if the goal isn’t reached by {{ p.deadline|nice_date }}.</span></label>
+            <button class="btn btn--primary btn--block" type="submit">{{ icon('lock', 18) }} Continue to secure payment</button>
+            <p class="tiny muted" style="margin:10px 0 0;text-align:center">Card, Apple Pay and Google Pay via Yoco. We never see your card details.</p>
+          </form>
+          {% elif p.status == 'funding' %}
+          <p style="margin-top:18px" class="muted">The funding deadline has passed. We’re finalising this project.</p>
+          {% elif p.status in ('funded', 'scheduled', 'in_progress') %}
+          <div class="guarantee" style="margin-top:20px">{{ icon('check', 22) }}<p><b>Fully funded — thank you!</b><br>{% if p.scheduled_for %}The clean is booked for {{ p.scheduled_for|nice_date }}.{% else %}We’re scheduling the crew now.{% endif %} Follow progress below.</p></div>
+          {% elif p.status == 'completed' %}
+          <div class="guarantee" style="margin-top:20px">{{ icon('check', 22) }}<p><b>This street has been cleaned.</b><br>See the before and after photos below.</p></div>
+          {% endif %}
+        </div>
+
+        <div class="panel panel--paving">
+          <h3 style="font-size:1.05rem">Share with your street</h3>
+          <p class="small muted">Most streets are funded through one WhatsApp message to the neighbourhood group.</p>
+          <div class="share">
+            <a class="btn btn--sm btn--primary" href="https://wa.me/?text={{ share_text|urlencode }}" target="_blank" rel="noopener">{{ icon('whatsapp', 18) }} WhatsApp</a>
+            <button class="btn btn--sm btn--ghost" type="button" data-copy="{{ share_url }}">{{ icon('link', 18) }} Copy link</button>
+            <a class="btn btn--sm btn--ghost" href="mailto:?subject={{ ('Help clean ' ~ p.street_name)|urlencode }}&body={{ share_text|urlencode }}">{{ icon('mail', 18) }} Email</a>
+            <button class="btn btn--sm btn--ghost" type="button" data-share="{{ share_url }}" data-title="{{ p.title }}">Share…</button>
+          </div>
+        </div>
+
+        <div class="guarantee">{{ icon('shield', 24) }}<p class="small"><b>Your money is protected.</b> Contributions are ring-fenced for this street. If the goal isn’t reached by {{ p.deadline|nice_date }}, everyone is refunded automatically. <a href="{{ url_for('public.how_it_works') }}#refunds">How refunds work</a></p></div>
+
+        {% if backers %}
+        <div class="panel">
+          <h3 style="font-size:1.05rem">Neighbours who chipped in</h3>
+          <ul class="backers">
+            {% for b in backers %}
+            <li>
+              <span class="avatar" aria-hidden="true">{{ 'A' if b.anonymous else b.name|initials }}</span>
+              <span><b>{{ 'Anonymous' if b.anonymous else b.name }}</b>{% if b.message %}<q>{{ b.message }}</q>{% endif %}</span>
+              <span class="small">{{ b.amount_cents|rand }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if rounds|length > 1 %}
+        <div class="panel"><h3 style="font-size:1.05rem">Monthly rounds</h3>
+          <ul style="margin:0;padding-left:18px">{% for r in rounds %}<li>{% if r.slug == p.slug %}<b>Month {{ r.round_no }}</b>{% else %}<a href="{{ url_for('public.project', slug=r.slug) }}">Month {{ r.round_no }}</a>{% endif %} <span class="muted small">({{ r.status|replace('_',' ') }})</span></li>{% endfor %}</ul>
+        </div>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}

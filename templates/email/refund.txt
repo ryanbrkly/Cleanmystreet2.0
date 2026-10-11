@@ -1,0 +1,9 @@
+Hi {{ c.name }},
+
+We've refunded your contribution of {{ c.amount_cents|rand }} to {{ project.title }}.
+{% if reason %}
+Reason: {{ reason }}
+{% endif %}
+Refunds usually show on your statement within 3–5 business days.
+
+Clean My Street

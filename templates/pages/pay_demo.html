@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set title = 'Demo checkout' %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block main %}
+<section class="section">
+  <div class="wrap narrow">
+    <div class="panel">
+      <p class="pill pill--monthly">Demo checkout — no money moves</p>
+      <h1 style="font-size:2rem;margin-top:14px">Pay {{ c.amount_cents|rand }}</h1>
+      <p class="lede">to <b>{{ p.title }}</b> as {{ c.name }} ({{ c.email }}).</p>
+      <p class="muted">In live mode this step is Yoco’s secure hosted checkout. Choose an outcome to test the flow.</p>
+      <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn--primary" name="outcome" value="success">Simulate successful payment</button>
+        <button class="btn btn--ghost" name="outcome" value="fail">Simulate declined card</button>
+        <button class="btn btn--ghost" name="outcome" value="cancel">Cancel</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

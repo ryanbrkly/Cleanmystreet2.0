@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import icon, flashes, tape %}
+{% set title = 'Request ' ~ req.ref %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <div class="crumbs">Request {{ req.ref }}</div>
+    <h1>{% if is_new %}Thanks, {{ req.requester_name.split(' ')[0] }} — we’ve got your request{% else %}{{ req.street_name }}{% endif %}</h1>
+    <p class="lede">{% if is_new %}We’ve emailed you a copy. Bookmark this page to follow progress: it’s your private tracking link.{% else %}{{ req.street_name }}{% if req.suburb %}, {{ req.suburb }}{% endif %}, {{ req.city }}{% endif %}</p>
+  </div>
+</section>
+<section class="section" style="padding-top:48px">
+  <div class="wrap form-layout">
+    <div>
+      {{ flashes() }}
+      <h2>Status: <span class="pill pill--{{ req.status }}" style="font-size:1rem;vertical-align:middle">{{ status_label }}</span></h2>
+
+      {% if req.status == 'revision_requested' %}
+        <div class="flash flash--info" style="margin:20px 0 32px"><b>Our team asked for a few changes:</b><br>{{ req.admin_note }}</div>
+        <form method="post" enctype="multipart/form-data" novalidate>
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          {% set form = request.form if request.method == 'POST' else req_dict %}
+          {% include "partials/request_fields.html" %}
+          <button class="btn btn--primary" type="submit">Send updated request</button>
+        </form>
+      {% elif req.status == 'rejected' %}
+        <p class="lede">Unfortunately we can’t take on this request.</p>
+        {% if req.admin_note %}<div class="flash flash--info"><b>Reason:</b> {{ req.admin_note }}</div>{% endif %}
+        <p style="margin-top:20px">Questions? Email <a href="mailto:{{ site.contact_email }}?subject={{ req.ref }}">{{ site.contact_email }}</a> and quote {{ req.ref }}.</p>
+      {% elif req.status == 'approved' and project %}
+        <p class="lede">Your quote is approved and your funding page is live. Share it with your neighbours to reach the goal.</p>
+        <div class="panel" style="margin:24px 0">
+          <h3>{{ project.title }}</h3>
+          {{ tape(project.pct) }}
+          <p style="margin:10px 0 18px"><b>{{ project.raised_cents|rand }}</b> raised of {{ project.goal_cents|rand }} · {{ project.backers }} neighbours · deadline {{ project.deadline|nice_date }}</p>
+          <a class="btn btn--primary" href="{{ url_for('public.project', slug=project.slug) }}">Open funding page</a>
+        </div>
+      {% else %}
+        <p class="lede">Our team is assessing your street. You’ll receive an itemised quote by email within 24–48 hours.</p>
+      {% endif %}
+
+      <h3 style="margin-top:40px">Your request</h3>
+      <table class="quote-table">
+        <tr><td>Street</td><td style="font-weight:400;text-align:right">{{ req.street_name }}</td></tr>
+        <tr><td>Area</td><td style="font-weight:400">{{ req.suburb }} {{ req.city }} {{ req.postcode }}</td></tr>
+        <tr><td>Service</td><td style="font-weight:400">{{ {'once':'Once-off clean','monthly':'Monthly upkeep','unsure':'Not sure yet'}[req.service_pref] }}</td></tr>
+        <tr><td>Submitted</td><td style="font-weight:400">{{ req.created_at|nice_datetime }}</td></tr>
+      </table>
+      <p style="margin-top:16px">{{ req.description }}</p>
+    </div>
+    <aside class="panel panel--paving">
+      <h3>Progress</h3>
+      {% set order = ['submitted', 'under_review', 'approved'] %}
+      {% set idx = order.index(req.status) if req.status in order else (1 if req.status == 'revision_requested' else -1) %}
+      <ol class="timeline" style="margin-top:16px">
+        <li class="{{ 'done' if idx >= 0 else '' }}"><b>Request received</b><span>{{ req.created_at|nice_date }}</span></li>
+        <li class="{{ 'done' if idx >= 2 else ('current' if idx == 1 or idx == 0 else '') }}"><b>{{ 'Changes requested' if req.status == 'revision_requested' else 'Assessment and quote' }}</b><span>Within 24–48 hours</span></li>
+        <li class="{{ 'done' if idx >= 2 else '' }}"><b>Funding page live</b><span>Share with neighbours</span></li>
+        <li class="{{ 'done' if project and project.status == 'completed' else '' }}"><b>Street cleaned</b><span>Photos posted to the page</span></li>
+      </ol>
+    </aside>
+  </div>
+</section>
+{% endblock %}

@@ -49,7 +49,7 @@ def home():
         "SELECT * FROM projects WHERE status='completed' ORDER BY completed_at DESC LIMIT 3")]
     sponsors = query("SELECT * FROM sponsors WHERE active=1 ORDER BY sort_order, id")
     return render_template(
-        "public/home.html",
+        "pages/home.html",
         stats=public_stats(),
         featured=featured,
         completed=completed,
@@ -79,7 +79,7 @@ def projects():
         args.extend([f"%{q}%"] * 4)
     sql += " ORDER BY CASE status WHEN 'funding' THEN 0 ELSE 1 END, deadline, created_at DESC"
     items = [project_view(r) for r in query(sql, args)]
-    return render_template("public/projects.html", items=items, status=status, q=q, stats=public_stats())
+    return render_template("pages/projects.html", items=items, status=status, q=q, stats=public_stats())
 
 
 @bp.route("/projects/<slug>")
@@ -94,34 +94,34 @@ def project(slug):
     rounds = query("SELECT slug, round_no, status FROM projects WHERE request_id=? AND request_id IS NOT NULL "
                    "ORDER BY round_no", (p["request_id"],)) if p["request_id"] else []
     presets = sorted({max(p["min_contribution_cents"], v) for v in (10000, 25000, 50000, 100000)})
-    return render_template("public/project.html", p=p, updates=updates, backers=backers,
+    return render_template("pages/project.html", p=p, updates=updates, backers=backers,
                            presets=presets, rounds=rounds)
 
 
 @bp.route("/how-it-works")
 def how_it_works():
-    return render_template("public/how_it_works.html")
+    return render_template("pages/how_it_works.html")
 
 
 @bp.route("/about")
 def about():
-    return render_template("public/about.html", stats=public_stats())
+    return render_template("pages/about.html", stats=public_stats())
 
 
 @bp.route("/sponsors")
 def sponsors():
     items = query("SELECT * FROM sponsors WHERE active=1 ORDER BY sort_order, id")
-    return render_template("public/sponsors.html", sponsors=items)
+    return render_template("pages/sponsors.html", sponsors=items)
 
 
 @bp.route("/privacy")
 def privacy():
-    return render_template("public/privacy.html")
+    return render_template("pages/privacy.html")
 
 
 @bp.route("/terms")
 def terms():
-    return render_template("public/terms.html")
+    return render_template("pages/terms.html")
 
 
 # ---------------------------------------------------------------- requests
@@ -158,7 +158,7 @@ def request_clean():
                                  ref=ref, street=form["street_name"], city=form["city"],
                                  url=url_for("admin.requests_list", _external=True))
             return redirect(url_for("public.track", token=token, new=1))
-    return render_template("public/request.html", form=form, errors=errors,
+    return render_template("pages/request.html", form=form, errors=errors,
                            default_days=int(settings.get("default_funding_days") or 21))
 
 
@@ -212,7 +212,7 @@ def track(token):
     if req["project_id"]:
         row = query("SELECT * FROM projects WHERE id=?", (req["project_id"],), one=True)
         project = project_view(row) if row else None
-    return render_template("public/track.html", req=req, req_dict=dict(req), project=project, errors=errors,
+    return render_template("pages/track.html", req=req, req_dict=dict(req), project=project, errors=errors,
                            status_label=REQUEST_STATUS_LABELS.get(req["status"], req["status"]),
                            is_new=request.args.get("new"))
 
@@ -288,7 +288,7 @@ def pay_demo(token):
             execute("UPDATE contributions SET status='failed' WHERE id=? AND status='pending'", (c["id"],))
             return redirect(url_for("public.pay_return", token=token, failed=1))
         return redirect(url_for("public.pay_cancel", token=token))
-    return render_template("public/pay_demo.html", c=c, p=p)
+    return render_template("pages/pay_demo.html", c=c, p=p)
 
 
 @bp.route("/pay/return/<token>")
@@ -306,7 +306,7 @@ def pay_return(token):
         execute("UPDATE contributions SET status='failed' WHERE id=?", (c["id"],))
         c = _contribution_by_token(token)
     p = project_view(query("SELECT * FROM projects WHERE id=?", (c["project_id"],), one=True))
-    return render_template("public/pay_result.html", c=c, p=p)
+    return render_template("pages/pay_result.html", c=c, p=p)
 
 
 @bp.route("/pay/cancel/<token>")

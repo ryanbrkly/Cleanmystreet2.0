@@ -19,7 +19,17 @@ def create_app(test_config=None):
     # Serverless hosts (Vercel, AWS Lambda) only allow writing to /tmp, and /tmp is
     # wiped whenever the function restarts. Data there is temporary: fine for a demo,
     # not for real projects and payments (see README, "Deploying").
-    serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    serverless = bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("VERCEL_URL")
+                      or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or os.environ.get("LAMBDA_TASK_ROOT"))
+    if not serverless and not os.environ.get("DATABASE_PATH"):
+        # Read-only project folder (some serverless hosts): fall back to /tmp automatically.
+        try:
+            os.makedirs(app.instance_path, exist_ok=True)
+            probe = os.path.join(app.instance_path, ".write-test")
+            open(probe, "w").close()
+            os.remove(probe)
+        except OSError:
+            serverless = True
     default_db = "/tmp/cleanmystreet.sqlite3" if serverless else os.path.join(app.instance_path, "cleanmystreet.sqlite3")
     default_uploads = "/tmp/uploads" if serverless else os.path.join(os.path.dirname(app.root_path), "static", "uploads")
     app.config.from_mapping(
@@ -128,18 +138,18 @@ def create_app(test_config=None):
 
     @app.errorhandler(404)
     def not_found(_e):
-        return render_template("public/error.html", code=404,
+        return render_template("pages/error.html", code=404,
                                title="Page not found",
                                message="We couldn't find that page. It may have moved."), 404
 
     @app.errorhandler(400)
     def bad_request(e):
-        return render_template("public/error.html", code=400, title="Something went wrong",
+        return render_template("pages/error.html", code=400, title="Something went wrong",
                                message=getattr(e, "description", "Bad request")), 400
 
     @app.errorhandler(413)
     def too_large(_e):
-        return render_template("public/error.html", code=413, title="File too large",
+        return render_template("pages/error.html", code=413, title="File too large",
                                message="Please upload images smaller than 25 MB."), 413
 
     # ------------------------------------------------------------ CLI

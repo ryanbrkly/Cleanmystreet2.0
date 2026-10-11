@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import icon %}
+{% set title = 'How it works' %}
+{% set description = 'Request, quote, share, fund, clean. How Clean My Street works and how our 100% refund guarantee protects every contributor.' %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <h1>How Clean My Street works</h1>
+    <p class="lede">Residents stay in control from start to finish. You see the quote, you see every rand raised, and you see the photos when the job is done.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap two-col">
+    <div>
+      <h2>Seven steps from request to clean street</h2>
+      <p class="muted">Most projects go from request to completed clean in two to five weeks, depending on how quickly neighbours fund.</p>
+      <img src="{{ url_for('static', filename='img/gallery/drain-clearing.jpg') }}" alt="Crew member clearing a blocked storm-water drain with a pick" style="border-radius:10px;margin-top:24px;aspect-ratio:4/5;object-fit:cover" loading="lazy">
+    </div>
+    <ol class="timeline" style="margin-top:8px">
+      <li class="done"><b>1. Submit a request</b><span>Street, suburb, what needs doing and a photo if you have one. About two minutes, no account needed. You get a private link to track it.</span></li>
+      <li class="done"><b>2. We assess and quote</b><span>Within 24–48 hours you receive an itemised quote: a once-off clean, a monthly upkeep rate, or both. If we need more detail we’ll ask you to update the request.</span></li>
+      <li class="done"><b>3. Your funding page goes live</b><span>When the quote is approved we publish a funding page with a goal, a minimum contribution per household and a deadline (usually 14–30 days).</span></li>
+      <li class="done"><b>4. Neighbours contribute</b><span>Share the link on WhatsApp or email. Contributions are paid by card, Apple Pay or Google Pay through Yoco and appear on the page in real time.</span></li>
+      <li class="done"><b>5. Goal reached</b><span>The money is allocated to your street only. We book the crew, usually within 7 days, and tell every contributor the date.</span></li>
+      <li class="done"><b>6. We clean</b><span>A uniformed crew works the street with cones and signage in place: verges, drains, pavements, gutters and dumped rubble.</span></li>
+      <li class="done"><b>7. Before and after</b><span>Photos and video are posted to the project page and every contributor gets a completion email.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--paving" id="pricing">
+  <div class="wrap">
+    <div class="section-head"><h2>Two ways to pay for a clean street</h2></div>
+    <div class="two-col">
+      <div class="panel">
+        <h3>Once-off clean</h3>
+        <p>A full reset of the street. Priced per job after we assess it — the size of the street, the number of drains and how much needs to be removed all affect the quote.</p>
+        <p class="muted small">Best for: streets that haven’t been maintained for a while.</p>
+      </div>
+      <div class="panel">
+        <h3>Monthly upkeep</h3>
+        <p>A regular maintenance visit after the initial clean, so the street stays clean. Each month opens a new funding round with the same quote, and neighbours contribute for that month.</p>
+        <p class="muted small">Best for: busy roads, streets near parks or schools, and residents’ associations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="refunds">
+  <div class="wrap two-col">
+    <div>
+      <h2>Your money is protected</h2>
+      <p class="lede">Your contribution is only used if the project succeeds.</p>
+      <div class="guarantee" style="margin-top:24px">{{ icon('shield', 26) }}<p><b>100% refund guarantee.</b> If the goal isn’t reached by the deadline, or the project is cancelled, every contributor is refunded in full, automatically. Not a single rand is kept.</p></div>
+    </div>
+    <div class="faq">
+      <details open><summary>Goal reached: what happens to my money?</summary><p>It is allocated to that street’s clean and nothing else. Funds are never pooled across projects or used to cover other streets.</p></details>
+      <details><summary>Goal not reached: how do refunds work?</summary><p>The day after the deadline, every payment is refunded to the card it came from. You’ll get an email, and banks usually show the refund within 3–5 business days. You don’t need to do anything.</p></details>
+      <details><summary>What if a project is cancelled?</summary><p>For example, if the municipality cleans the street first. We explain why on the project page and refund everyone in full.</p></details>
+      <details><summary>Is there a minimum contribution?</summary><p>Each project shows its minimum, usually between R50 and R100. It keeps the cost of processing small payments down. There’s no maximum.</p></details>
+      <details><summary>Is my payment secure?</summary><p>Payments are processed on Yoco’s secure, PCI-DSS compliant checkout with 3-D Secure. We never see or store your card details.</p></details>
+      <details><summary>How do I know my street was actually cleaned?</summary><p>Before, during and after photos are posted on the project page, and every contributor is emailed when the job is complete.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="tape-divider" aria-hidden="true"></div>
+  <div class="wrap">
+    <div><h2>Ready to start?</h2><p>Request a quote for your street, or back a project that’s already raising funds.</p></div>
+    <div class="actions">
+      <a class="btn btn--hivis" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+      <a class="btn btn--ghost-light" href="{{ url_for('public.projects') }}">Browse projects</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

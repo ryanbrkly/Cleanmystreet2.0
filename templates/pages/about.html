@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set title = 'About us' %}
+{% set description = 'Clean My Street connects residents with professional cleaning crews, funded by the community, for the community.' %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <h1>Reshaping communities, restoring value</h1>
+    <p class="lede">We believe clean, well-kept streets aren’t a luxury. Clean My Street connects residents with professional crews, funded by the community, for the community.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="photo-strip">
+      <img src="{{ url_for('static', filename='img/gallery/crew-slab.jpg') }}" alt="Two crew members in Clean My Street vests carrying a concrete slab" loading="lazy">
+      <img src="{{ url_for('static', filename='img/gallery/brushcutter-sm.jpg') }}" alt="Crew member brush-cutting a verge" loading="lazy">
+      <img src="{{ url_for('static', filename='img/gallery/power-brush-sweep-sm.jpg') }}" alt="Crew member power-brushing sand off the road edge" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="wrap two-col">
+    <div>
+      <h2>Why we exist</h2>
+    </div>
+    <div class="prose">
+      <p>Across South Africa, residents live on streets with littered pavements, blocked drains and overgrown verges. Municipal services are stretched, and the gap between what neighbourhoods need and what they receive keeps growing.</p>
+      <p>Clean My Street started in Johannesburg in January 2024, out of frustration and hope: frustration at the state of our streets, and hope that neighbours, given simple tools, can fix them together. We built a platform that makes it easy to pool money transparently, hire a professional crew and see the result.</p>
+      <p>Every clean also creates paid work for local crew members, trained in safe roadside work and kitted out in uniform and protective gear.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section--paving">
+  <div class="wrap">
+    <div class="section-head"><h2>What we stand for</h2></div>
+    <div class="values">
+      <div><h3>Transparency</h3><p>Every rand is accounted for on the project page. Funds are ring-fenced per street and never pooled. Before-and-after photos are published for every clean.</p></div>
+      <div><h3>Community first</h3><p>Clean streets start with residents who care. We give neighbours the tools to take ownership of the space beyond their walls.</p></div>
+      <div><h3>Fair funding</h3><p>If a project doesn’t reach its goal, every contributor is refunded in full. No risk and no lock-in.</p></div>
+      <div><h3>Lasting impact</h3><p>We don’t just pick up litter. Clearing drains and verges helps prevent flooding, keeps pavements walkable and protects property values.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap two-col">
+    <div>
+      <h2>Where we work</h2>
+      <p class="lede">We currently serve {{ site.service_areas }}. Not on the list? Request a clean anyway — demand from your area helps us decide where to grow next.</p>
+      <a class="btn btn--primary" href="{{ url_for('public.request_clean') }}">Request a clean</a>
+    </div>
+    <div class="numbers" style="border:0">
+      <div class="wrap" style="padding:0;grid-template-columns:1fr 1fr">
+        <div><b>{{ stats.streets }}</b><span>streets cleaned</span></div>
+        <div><b>{{ stats.raised_cents|rand }}</b><span>raised by neighbours</span></div>
+        <div><b>{{ stats.contributors }}</b><span>contributors</span></div>
+        <div><b>{{ stats.active }}</b><span>streets raising funds</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

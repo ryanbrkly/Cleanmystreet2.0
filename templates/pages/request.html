@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import field, icon, flashes %}
+{% set title = 'Request a clean' %}
+{% set description = 'Request a professional clean for your street. Get an itemised quote within 48 hours.' %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <h1>Request a clean for your street</h1>
+    <p class="lede">Tell us about the street. We’ll assess it and send an itemised quote within 24–48 hours. No account needed and nothing to pay yet.</p>
+  </div>
+</section>
+<section class="section" style="padding-top:48px">
+  <div class="wrap form-layout">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      {{ flashes() }}
+      {% if errors %}<div class="flash flash--error" role="alert" style="margin-bottom:24px">Please fix the {{ errors|length }} highlighted field{{ '' if errors|length == 1 else 's' }} below.</div>{% endif %}
+      {% include "partials/request_fields.html" %}
+
+      <fieldset>
+        <legend><span class="num">3</span> Your details</legend>
+        <div class="form-grid">
+          {{ field('requester_name', 'Full name', errors, form.get('requester_name',''), attrs='autocomplete="name"') }}
+          {{ field('email', 'Email', errors, form.get('email',''), type='email', attrs='autocomplete="email"', hint='We’ll send your quote and tracking link here.') }}
+          {{ field('phone', 'Phone', errors, form.get('phone',''), type='tel', required=False, attrs='autocomplete="tel"') }}
+          <div class="field">
+            <label for="f-days">Funding deadline</label>
+            <select id="f-days" name="funding_days">
+              {% for d in (14, 21, 30) %}<option value="{{ d }}"{% if (form.get('funding_days')|int(default_days)) == d %} selected{% endif %}>{{ d }} days</option>{% endfor %}
+            </select>
+            <div class="hint">How long neighbours have to reach the goal once your page is live.</div>
+          </div>
+          <div class="full field{% if errors.get('consent') %} has-error{% endif %}">
+            <label class="check"><input type="checkbox" name="consent" value="1"{% if form.get('consent') %} checked{% endif %}> <span>I agree that Clean My Street may use these details to contact me about this request, as set out in the <a href="{{ url_for('public.privacy') }}" target="_blank">privacy policy</a>.</span></label>
+            {% if errors.get('consent') %}<div class="error">{{ errors.consent }}</div>{% endif %}
+          </div>
+        </div>
+      </fieldset>
+      <button class="btn btn--primary" type="submit">Send my request</button>
+    </form>
+
+    <aside class="panel panel--paving">
+      <h3>What happens next</h3>
+      <ol class="timeline" style="margin-top:16px">
+        <li class="current"><b>You send the request</b><span>You’ll get a private link to track it.</span></li>
+        <li><b>We quote within 48 hours</b><span>Once-off, monthly upkeep, or both.</span></li>
+        <li><b>Your funding page goes live</b><span>Share it with your neighbours.</span></li>
+        <li><b>Goal reached, we clean</b><span>Usually within 7 days of funding.</span></li>
+      </ol>
+      <div class="guarantee" style="background:#fff">{{ icon('shield', 22) }}<p class="small">If your street doesn’t reach its goal, every contributor is refunded in full.</p></div>
+    </aside>
+  </div>
+</section>
+{% endblock %}

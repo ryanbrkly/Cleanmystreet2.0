@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% set title = 'Sponsors' %}
+{% set description = 'Businesses and associations that help fund clean streets in their neighbourhoods.' %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <h1>Put your name on a cleaner neighbourhood</h1>
+    <p class="lede">Sponsors help cover cleans near their shops, offices and estates — and are thanked on every project page they support and on our homepage.</p>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    {% if sponsors %}
+    <div class="section-head"><h2>Our sponsors</h2></div>
+    <div class="sponsor-grid" style="margin-bottom:64px">
+      {% for s in sponsors %}
+        {% if s.url %}<a class="sponsor" href="{{ s.url }}" target="_blank" rel="noopener">{% else %}<div class="sponsor">{% endif %}
+          {% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }}">{% else %}<b>{{ s.name }}</b>{% endif %}
+        {% if s.url %}</a>{% else %}</div>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="two-col">
+      <div>
+        <h2>Ways to sponsor</h2>
+        <div class="values" style="grid-template-columns:1fr">
+          <div><h3>Top up a street</h3><p>Close the gap on a project near you that’s almost funded.</p></div>
+          <div><h3>Adopt a street</h3><p>Fund the monthly upkeep of a road outside your business, with your logo on the site sign.</p></div>
+          <div><h3>Area partner</h3><p>Support a set number of cleans across a suburb each quarter, with homepage placement.</p></div>
+        </div>
+      </div>
+      <div class="panel panel--paving">
+        <h3>Talk to us</h3>
+        <p>Tell us your area and budget and we’ll suggest streets that would benefit most.</p>
+        <a class="btn btn--primary" href="mailto:{{ site.contact_email }}?subject=Sponsoring%20Clean%20My%20Street">Email {{ site.contact_email }}</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

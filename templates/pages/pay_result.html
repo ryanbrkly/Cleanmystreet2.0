@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import icon, tape %}
+{% set title = 'Thank you' if c.status == 'paid' else 'Payment status' %}
+{% set share_url = base_url ~ url_for('public.project', slug=p.slug) %}
+{% block head %}<meta name="robots" content="noindex">{% if c.status == 'pending' %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+{% block main %}
+<section class="section">
+  <div class="wrap narrow">
+    {% if c.status == 'paid' %}
+      <div class="tape-divider" style="border-radius:3px;margin-bottom:28px" aria-hidden="true"></div>
+      <h1>Thank you, {{ c.name.split(' ')[0] }}.</h1>
+      <p class="lede">Your {{ c.amount_cents|rand }} is in. {{ p.title }} is now {{ p.pct }}% funded. We’ve emailed your receipt to {{ c.email }}.</p>
+      <div class="panel" style="margin:28px 0">
+        {{ tape(p.pct) }}
+        <p style="margin:12px 0 0"><b>{{ p.raised_cents|rand }}</b> of {{ p.goal_cents|rand }} · {{ p.backers }} neighbours{% if p.status == 'funding' %} · {{ [p.days_left,0]|max }} days left{% endif %}</p>
+      </div>
+      {% if p.status == 'funding' %}
+      <h2 style="font-size:1.5rem">One more thing: share it</h2>
+      <p>Streets that share in their WhatsApp group are far more likely to reach the goal.</p>
+      <div class="share">
+        <a class="btn btn--primary" href="https://wa.me/?text={{ ('I just chipped in to clean ' ~ p.street_name ~ '. Join me — if we don\'t reach the goal, everyone gets a full refund: ' ~ share_url)|urlencode }}" target="_blank" rel="noopener">{{ icon('whatsapp', 18) }} Share on WhatsApp</a>
+        <button class="btn btn--ghost" type="button" data-copy="{{ share_url }}">{{ icon('link', 18) }} Copy link</button>
+      </div>
+      {% else %}
+      <div class="guarantee">{{ icon('check', 22) }}<p><b>Goal reached!</b> We’re booking the crew and will email you the date.</p></div>
+      {% endif %}
+      <p style="margin-top:32px"><a href="{{ url_for('public.project', slug=p.slug) }}">Back to the project page</a></p>
+    {% elif c.status == 'pending' %}
+      <h1>Confirming your payment…</h1>
+      <p class="lede">This usually takes a few seconds. This page refreshes automatically.</p>
+    {% else %}
+      <h1>Your payment didn’t go through</h1>
+      <p class="lede">You haven’t been charged. You can try again with another card.</p>
+      <a class="btn btn--primary" href="{{ url_for('public.project', slug=p.slug) }}#contribute">Try again</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

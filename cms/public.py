@@ -115,7 +115,10 @@ def sponsors():
     items = query("""SELECT s.*, (SELECT COUNT(*) FROM project_sponsors ps JOIN projects p ON p.id=ps.project_id
                                  WHERE ps.sponsor_id=s.id AND p.status NOT IN ('cancelled','failed')) AS project_count
                      FROM sponsors s WHERE s.active=1 ORDER BY s.sort_order, s.id""")
-    return render_template("pages/sponsors.html", sponsors=items)
+    areas = sorted({(r["area"] or "").strip() for r in items if (r["area"] or "").strip()}, key=str.lower)
+    area = request.args.get("area", "").strip()
+    shown = [r for r in items if (r["area"] or "").strip().lower() == area.lower()] if area else items
+    return render_template("pages/sponsors.html", sponsors=shown, areas=areas, area=area, total=len(items))
 
 
 @bp.route("/sponsors/<slug>")
@@ -129,7 +132,10 @@ def sponsor_page(slug):
                  (s["id"],))
     projects = [project_view(r) for r in rows]
     total = sum(r["sponsor_cents"] or 0 for r in rows)
-    return render_template("pages/sponsor.html", s=s, projects=projects, total_cents=total)
+    others = query("SELECT * FROM sponsors WHERE active=1 AND id<>? AND slug IS NOT NULL ORDER BY sort_order, id", (s["id"],))
+    area = (s["area"] or "").strip().lower()
+    nearby = [o for o in others if area and (o["area"] or "").strip().lower() == area] or ([] if area else others)
+    return render_template("pages/sponsor.html", s=s, projects=projects, total_cents=total, nearby=nearby[:4])
 
 
 @bp.route("/privacy")
@@ -405,7 +411,9 @@ def cron_expire():
 @bp.route("/healthz")
 def healthz():
     query("SELECT 1")
-    return {"ok": True}
+    turso = bool(current_app.config.get("TURSO_DATABASE_URL"))
+    return {"ok": True, "database": "turso" if turso else "local",
+            "permanent": not current_app.config.get("TEMP_STORAGE")}
 
 
 @bp.route("/robots.txt")

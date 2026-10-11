@@ -315,6 +315,30 @@ class AdminTests(Base):
             self.assertEqual(query("SELECT COUNT(*) n FROM project_sponsors", one=True)["n"], 0)
         self.assertEqual(self.client.get(f"/projects/{p['slug']}").status_code, 200)
 
+    def test_sponsor_directory_by_area(self):
+        token = self.login()
+        for name, area, offer in (("Deli One", "Northcliff", "Free coffee for volunteers"),
+                                  ("Deli Two", "Northcliff", ""), ("Far Shop", "Parkhurst", "")):
+            self.client.post("/admin/sponsors/new", data={"_csrf": token, "name": name, "active": "1", "area": area,
+                                                          "category": "Café", "offer": offer, "phone": "011 555 0101",
+                                                          "address": "1 Main Rd"})
+        page = self.client.get("/sponsors").get_data(as_text=True)
+        self.assertIn("Support the businesses that support your street", page)
+        self.assertIn("Neighbour offer", page)
+        self.assertIn("Parkhurst", page)
+        north = self.client.get("/sponsors?area=Northcliff").get_data(as_text=True)
+        self.assertIn("Deli Two", north)
+        self.assertNotIn("Far Shop", north)
+        self.assertEqual(self.client.get("/sponsors?area=Nowhere").status_code, 200)
+        one = self.client.get("/sponsors/deli-one").get_data(as_text=True)
+        self.assertIn("Thank-you offer", one)
+        self.assertIn("Free coffee for volunteers", one)
+        self.assertIn("011 555 0101", one)
+        self.assertIn("Deli Two", one)          # nearby sponsor in the same area
+        self.assertNotIn("Far Shop", one)
+        edit = self.client.get("/admin/sponsors/new").get_data(as_text=True)
+        self.assertIn('name="area"', edit)
+
     def test_old_database_is_upgraded(self):
         """A database created before sponsor pages and photo storage existed is upgraded on start."""
         import sqlite3
@@ -568,7 +592,7 @@ class FakeTurso:
         if v is None: return {"type": "null"}
         if isinstance(v, int): return {"type": "integer", "value": str(v)}
         if isinstance(v, float): return {"type": "float", "value": v}
-        if isinstance(v, bytes): return {"type": "blob", "base64": base64.b64encode(v).decode()}
+        if isinstance(v, bytes): return {"type": "blob", "base64": base64.b64encode(v).decode().rstrip("=")}
         return {"type": "text", "value": v}
 
     def post(self, url, json=None, timeout=None):
@@ -637,4 +661,12 @@ class TursoBackendTests(Base):
         for path in ("/admin/", "/admin/requests", "/admin/projects", "/admin/payments", "/admin/sponsors",
                      "/admin/settings", f"/admin/projects/{p['id']}", "/projects?status=all"):
             self.assertEqual(self.client.get(path).status_code, 200, path)
+        # sponsor logos (PNG blobs) come back from the remote database
+        sponsors = self.client.get("/sponsors").get_data(as_text=True)
+        logos = re.findall(r'src="(/static/uploads/sponsor-[^"]+)"', sponsors)
+        self.assertTrue(logos)
+        for logo in logos:
+            r = self.client.get(logo)
+            self.assertEqual(r.status_code, 200, logo)
+            self.assertEqual(r.mimetype, "image/png")
         self.assertGreater(self.fake.calls, 20)

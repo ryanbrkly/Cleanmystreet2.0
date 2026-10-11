@@ -93,7 +93,9 @@ def _decode(cell):
     if kind == "float":
         return float(cell["value"])
     if kind == "blob":
-        return base64.b64decode(cell.get("base64", ""))
+        data = cell.get("base64", "") or ""
+        data += "=" * (-len(data) % 4)  # Turso sends base64 without padding
+        return base64.b64decode(data)
     return cell.get("value")
 
 
@@ -204,6 +206,11 @@ MIGRATIONS = [
     ("sponsors", "slug", "TEXT"),
     ("sponsors", "description", "TEXT NOT NULL DEFAULT ''"),
     ("sponsors", "show_on_home", "INTEGER NOT NULL DEFAULT 1"),
+    ("sponsors", "area", "TEXT NOT NULL DEFAULT ''"),
+    ("sponsors", "category", "TEXT NOT NULL DEFAULT ''"),
+    ("sponsors", "offer", "TEXT NOT NULL DEFAULT ''"),
+    ("sponsors", "phone", "TEXT NOT NULL DEFAULT ''"),
+    ("sponsors", "address", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 

@@ -494,16 +494,20 @@ def sponsor_edit(sid=None):
                 flash(str(exc), "error")
                 return redirect(request.url)
         data = (name, safe_url(f.get("url")), clean_text(f.get("description"), 1200, multiline=True),
-                clean_text(f.get("blurb"), 300), 1 if f.get("active") else 0, 1 if f.get("show_on_home") else 0)
+                clean_text(f.get("blurb"), 300), 1 if f.get("active") else 0, 1 if f.get("show_on_home") else 0,
+                clean_text(f.get("area"), 80), clean_text(f.get("category"), 60), clean_text(f.get("offer"), 200),
+                clean_text(f.get("phone"), 30), clean_text(f.get("address"), 160))
         if s:
             if logo:
                 delete_upload(s["logo"])
             execute("UPDATE sponsors SET name=?, url=?, description=?, blurb=?, active=?, show_on_home=?, "
+                    "area=?, category=?, offer=?, phone=?, address=?, "
                     "logo=COALESCE(?, logo) WHERE id=?", data + (logo, sid))
         else:
             order = query("SELECT COALESCE(MAX(sort_order),0)+1 n FROM sponsors", one=True)["n"]
-            sid = execute("INSERT INTO sponsors(name, url, description, blurb, active, show_on_home, logo, sort_order, slug) "
-                          "VALUES (?,?,?,?,?,?,?,?,?)", data + (logo, order, unique_sponsor_slug(slugify(name))))
+            sid = execute("INSERT INTO sponsors(name, url, description, blurb, active, show_on_home, "
+                          "area, category, offer, phone, address, logo, sort_order, slug) "
+                          "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", data + (logo, order, unique_sponsor_slug(slugify(name))))
         # project allocations
         chosen = set(f.getlist("projects", type=int))
         for pid_ in chosen:

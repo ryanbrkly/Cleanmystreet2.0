@@ -1,20 +1,34 @@
 {% extends "base.html" %}
-{% from "partials/ui.html" import project_card %}
+{% from "partials/ui.html" import project_card, icon %}
 {% set title = s.name %}
 {% set description = (s.description or (s.name ~ ' supports community street cleaning with Clean My Street.'))|truncate(160) %}
 {% block main %}
 <section class="page-head">
   <div class="wrap">
-    <div class="crumbs"><a href="{{ url_for('public.sponsors') }}">Sponsors</a> / {{ s.name }}</div>
+    <div class="crumbs"><a href="{{ url_for('public.sponsors') }}">Sponsors</a>{% if s.area %} / <a href="{{ url_for('public.sponsors', area=s.area) }}#directory">{{ s.area }}</a>{% endif %} / {{ s.name }}</div>
     <div class="sponsor-hero">
       <div class="sponsor-hero__logo">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }} logo">{% else %}<b>{{ s.name }}</b>{% endif %}</div>
       <div>
+        <div class="sponsor-card__meta">
+          {% if s.category %}<span>{{ s.category }}</span>{% endif %}
+          {% if s.area %}<span>{{ icon('pin', 14) }} {{ s.area }}</span>{% endif %}
+        </div>
         <h1>{{ s.name }}</h1>
         {% if s.description %}<p class="lede" style="white-space:pre-line">{{ s.description }}</p>{% endif %}
         <p class="muted">Supporting {{ projects|length }} street{{ '' if projects|length == 1 else 's' }}{% if total_cents %} with {{ total_cents|rand }} in contributions{% endif %}.</p>
-        {% if s.url %}<a class="btn btn--ghost btn--sm" href="{{ s.url }}" target="_blank" rel="noopener">Visit {{ s.url|replace('https://','')|replace('http://','')|replace('www.','')|truncate(40, True, '') }}</a>{% endif %}
+        <ul class="contact-list">
+          {% if s.address %}<li>{{ icon('pin', 16) }} {{ s.address }}</li>{% endif %}
+          {% if s.phone %}<li>{{ icon('whatsapp', 16) }} <a href="tel:{{ s.phone|replace(' ', '') }}">{{ s.phone }}</a></li>{% endif %}
+          {% if s.url %}<li>{{ icon('link', 16) }} <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url|replace('https://','')|replace('http://','')|replace('www.','')|truncate(40, True, '') }}</a></li>{% endif %}
+        </ul>
       </div>
     </div>
+    {% if s.offer %}
+    <div class="offer-band">
+      <span class="offer-band__tag">Thank-you offer</span>
+      <p><b>{{ s.offer }}</b><br><span class="small">Mention Clean My Street when you visit {{ s.name }}.</span></p>
+    </div>
+    {% endif %}
   </div>
 </section>
 <section class="section">
@@ -24,6 +38,39 @@
     <div class="albums">{% for p in projects %}{{ project_card(p) }}{% endfor %}</div>
     {% else %}
     <div class="empty"><h3>No streets linked yet</h3><p>Projects this sponsor supports will appear here.</p></div>
+    {% endif %}
+  </div>
+</section>
+<section class="section section--paving">
+  <div class="wrap two-col">
+    <div>
+      <h2>Say thanks to {{ s.name }}</h2>
+      <p class="lede">Businesses keep sponsoring when they can see it matters to the people who live nearby.</p>
+      <ul class="ticks">
+        <li>{{ icon('check', 18) }} Choose them next time you need what they offer</li>
+        <li>{{ icon('check', 18) }} Tell them you saw them on Clean My Street</li>
+        <li>{{ icon('check', 18) }} Leave them a quick online review</li>
+        <li>{{ icon('check', 18) }} Share this page in your street or estate group</li>
+      </ul>
+      {% set share_url = url_for('public.sponsor_page', slug=s.slug, _external=True) %}
+      <div class="actions-row">
+        <a class="btn btn--ghost btn--sm" href="https://wa.me/?text={{ (s.name ~ ' helps keep our streets clean. Support them: ' ~ share_url)|urlencode }}" target="_blank" rel="noopener">{{ icon('whatsapp', 16) }} Share on WhatsApp</a>
+        <button type="button" class="btn btn--ghost btn--sm" data-copy="{{ share_url }}">{{ icon('link', 16) }} Copy link</button>
+      </div>
+    </div>
+    {% if nearby %}
+    <div>
+      <h3>More sponsors{% if s.area %} in {{ s.area }}{% endif %}</h3>
+      <div class="nearby">
+        {% for n in nearby %}
+        <a class="sponsor-row-mini" href="{{ url_for('public.sponsor_page', slug=n.slug) }}">
+          <span class="sponsor-thumb">{% if n.logo %}<img src="{{ url_for('static', filename='uploads/' ~ n.logo) }}" alt="" loading="lazy">{% else %}<b class="tiny">{{ n.name[:2]|upper }}</b>{% endif %}</span>
+          <span><b>{{ n.name }}</b>{% if n.category %}<br><span class="tiny muted">{{ n.category }}</span>{% endif %}</span>
+        </a>
+        {% endfor %}
+      </div>
+      <a class="small" href="{{ url_for('public.sponsors', area=s.area) if s.area else url_for('public.sponsors') }}#directory">See all{% if s.area %} in {{ s.area }}{% endif %}</a>
+    </div>
     {% endif %}
   </div>
 </section>

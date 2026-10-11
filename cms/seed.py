@@ -177,17 +177,19 @@ def seed_demo():
     from .db import unique_sponsor_slug
     from .utils import slugify
     demo_sponsors = [
-        ("Your Brand", (35, 48, 102), "A sample sponsor slot. Replace it with a real sponsor in Admin, Sponsors.", [p1, p3]),
-        ("Local Hero", (4, 50, 154), "A sample sponsor supporting monthly upkeep in Craighall.", [p4]),
-        ("Neighbour Co.", (44, 123, 182), "A sample sponsor slot.", [p2]),
-        ("Green Partner", (102, 150, 30), "A sample sponsor slot.", []),
+        ("Your Brand", (35, 48, 102), "A sample sponsor slot. Replace it with a real sponsor in Admin, Sponsors.", [p1, p3],
+         "Northcliff", "Hardware & building", "10% off for anyone who mentions Clean My Street"),
+        ("Local Hero", (4, 50, 154), "A sample sponsor supporting monthly upkeep in Craighall.", [p4],
+         "Craighall", "Café & restaurant", "Free coffee with any breakfast for street volunteers"),
+        ("Neighbour Co.", (44, 123, 182), "A sample sponsor slot.", [p2], "Northcliff", "Estate agent", ""),
+        ("Green Partner", (102, 150, 30), "A sample sponsor slot.", [], "Parkhurst", "Garden services", ""),
     ]
-    for order, (label, colour, about, linked) in enumerate(demo_sponsors):
+    for order, (label, colour, about, linked, area, category, offer) in enumerate(demo_sponsors):
         name = f"{label} (sample)"
-        sid = execute("INSERT INTO sponsors(name, logo, url, blurb, description, sort_order, active, show_on_home, slug) "
-                      "VALUES (?,?,?,?,?,?,1,1,?)",
+        sid = execute("INSERT INTO sponsors(name, logo, url, blurb, description, sort_order, active, show_on_home, slug, "
+                      "area, category, offer) VALUES (?,?,?,?,?,?,1,1,?,?,?,?)",
                       (name, _placeholder_logo(label, colour), "", "Sample sponsor", about, order,
-                       unique_sponsor_slug(slugify(name))))
+                       unique_sponsor_slug(slugify(name)), area, category, offer))
         for pid in linked:
             execute("INSERT INTO project_sponsors(project_id, sponsor_id, amount_cents) VALUES (?,?,?)",
                     (pid, sid, 250000 if pid == p1 else 0))

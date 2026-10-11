@@ -29,15 +29,25 @@
     });
   });
 
-  // Lightbox for gallery and progress photos
+  // Lightbox: opens any [data-lightbox] photo; arrows step through photos in the same group
   var lb = document.getElementById("lightbox");
-  var lastFocus = null;
-  function openLightbox(src, caption) {
+  var lastFocus = null, group = [], index = 0;
+  function show(i) {
+    var t = group[i]; if (!t) return;
+    index = i;
+    var img = lb.querySelector("img"), caps = lb.querySelectorAll("p");
+    img.src = t.getAttribute("data-lightbox");
+    img.alt = t.getAttribute("data-caption") || "";
+    caps[0].textContent = t.getAttribute("data-caption") || "";
+    caps[1].textContent = group.length > 1 ? (i + 1) + " of " + group.length : "";
+    lb.querySelectorAll(".lightbox__nav").forEach(function (b) { b.hidden = group.length < 2; });
+  }
+  function openLightbox(trigger) {
     if (!lb) return;
     lastFocus = document.activeElement;
-    lb.querySelector("img").src = src;
-    lb.querySelector("img").alt = caption || "";
-    lb.querySelector("p").textContent = caption || "";
+    var scope = trigger.closest("[data-gallery], .chapter, .beforeafter, .feed, .gallery");
+    group = scope ? Array.prototype.slice.call(scope.querySelectorAll("[data-lightbox]")) : [trigger];
+    show(Math.max(0, group.indexOf(trigger)));
     lb.classList.add("open");
     lb.querySelector("[data-close]").focus();
   }
@@ -47,13 +57,19 @@
     lb.querySelector("img").src = "";
     if (lastFocus) lastFocus.focus();
   }
+  function step(d) { if (group.length > 1) show((index + d + group.length) % group.length); }
   document.addEventListener("click", function (e) {
     var t = e.target.closest("[data-lightbox]");
-    if (t) { e.preventDefault(); openLightbox(t.getAttribute("data-lightbox"), t.getAttribute("data-caption")); return; }
+    if (t) { e.preventDefault(); openLightbox(t); return; }
+    var nav = e.target.closest(".lightbox__nav");
+    if (nav) { step(parseInt(nav.getAttribute("data-step"), 10)); return; }
     if (lb && (e.target === lb || e.target.closest("[data-close]"))) closeLightbox();
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && lb && lb.classList.contains("open")) closeLightbox();
+    if (!lb || !lb.classList.contains("open")) return;
+    if (e.key === "Escape") closeLightbox();
+    else if (e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowLeft") step(-1);
   });
 
   // Project feed filter (before / during / after)

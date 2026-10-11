@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/ui.html" import icon, tape, project_card, youtube, status_pill, plate %}
+{% from "partials/ui.html" import icon, tape, project_card, youtube, status_pill %}
 {% block main %}
 
 {# Cover: a full-bleed photograph with the title page laid over its lower edge #}
@@ -75,21 +75,19 @@
   </div>
 </section>
 
-<section class="section book" aria-labelledby="book-title">
+<section class="section filmstrip-section" aria-labelledby="crew-title">
   <div class="wrap">
-    <div class="section-head">
-      <h2 id="book-title">Our crews at work</h2>
-      <p>Every photograph here is from a real Clean My Street job. Tap any photo to see it larger.</p>
-    </div>
-    {% for spread in gallery|batch(3) %}
-    <div class="spread{% if loop.index is even %} spread--flip{% endif %}">
-      {% for name, alt in spread %}
-        {{ plate(url_for('static', filename='img/gallery/' ~ name ~ '.jpg'),
-                 url_for('static', filename='img/gallery/' ~ name ~ ('.jpg' if loop.first else '-sm.jpg')),
-                 alt, 'spread__main' if loop.first else '') }}
+    <h2 id="crew-title" class="filmstrip__title">Our crews at work</h2>
+    <ul class="filmstrip" data-gallery>
+      {% for name, alt in gallery[:6] %}
+      <li>
+        <button type="button" data-lightbox="{{ url_for('static', filename='img/gallery/' ~ name ~ '.jpg') }}" data-caption="{{ alt }}" aria-label="Enlarge photo: {{ alt }}">
+          <img src="{{ url_for('static', filename='img/gallery/' ~ name ~ '-sm.jpg') }}" alt="{{ alt }}" loading="lazy">
+        </button>
+      </li>
       {% endfor %}
-    </div>
-    {% endfor %}
+    </ul>
+    <p class="filmstrip__hint">Tap any photo to see it full size.</p>
   </div>
 </section>
 
@@ -106,28 +104,9 @@
 </section>
 {% endif %}
 
-{% if completed %}
-<section class="section section--paving">
-  <div class="wrap">
-    <div class="section-head"><h2>Recently completed</h2><a class="btn btn--ghost btn--sm" href="{{ url_for('public.projects', status='completed') }}">All completed streets</a></div>
-    <div class="albums">{% for p in completed %}{{ project_card(p) }}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
 
-<section class="section">
-  <div class="wrap mission">
-    <figure class="plate plate--still">
-      <img src="{{ url_for('static', filename='img/gallery/restore-sign.jpg') }}" alt="Clean My Street site sign reading #RestoreOurNeighbourhoods #RestoreOurPropertyValues #ChangeisCOMING, with a crew working behind it" loading="lazy">
-      <figcaption>The site sign that goes up on every street we clean.</figcaption>
-    </figure>
-    <div>
-      <blockquote>“The more we neglect what lies beyond our walls, the smaller our space becomes.”</blockquote>
-      <p class="lede">Overgrown verges, blocked drains and sand-covered pavements make streets less safe, flood faster in summer storms and pull property values down. Clean My Street gives neighbours a simple, transparent way to fix their own street together, and keep it fixed.</p>
-      <a class="btn btn--ghost" href="{{ url_for('public.about') }}">Why we started</a>
-    </div>
-  </div>
-</section>
+
+
 
 <section class="section section--paving" id="sponsors">
   <div class="wrap">

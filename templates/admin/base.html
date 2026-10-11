@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=2">
 </head>
 <body class="admin-body">
 {% set ep = request.endpoint or '' %}
@@ -37,8 +37,10 @@
 </div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
   <button class="btn btn--hivis btn--sm lightbox__close" type="button" data-close>Close</button>
-  <figure><img src="" alt=""><p></p></figure>
+  <button class="lightbox__nav lightbox__prev" type="button" data-step="-1" aria-label="Previous photo" hidden>&#8249;</button>
+  <figure><img src="" alt=""><p></p><p class="lightbox__count" aria-live="polite"></p></figure>
+  <button class="lightbox__nav lightbox__next" type="button" data-step="1" aria-label="Next photo" hidden>&#8250;</button>
 </div>
-<script src="{{ url_for('static', filename='js/site.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='js/site.js') }}?v=2" defer></script>
 </body>
 </html>

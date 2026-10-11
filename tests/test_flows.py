@@ -255,18 +255,83 @@ class AdminTests(Base):
     def test_sponsors_crud_and_homepage(self):
         token = self.login()
         for name in ("Alpha", "Beta"):
-            self.client.post("/admin/sponsors", data={"_csrf": token, "action": "create", "name": name,
-                                                      "url": "alpha.co.za", "logo": (png_bytes(), "l.png")},
-                             content_type="multipart/form-data")
+            r = self.client.post("/admin/sponsors/new", data={"_csrf": token, "name": name, "url": "alpha.co.za",
+                                                               "active": "1", "show_on_home": "1",
+                                                               "description": f"{name} supports clean streets.",
+                                                               "logo": (png_bytes(), "l.png")},
+                                 content_type="multipart/form-data")
+            self.assertEqual(r.status_code, 302)
         with self.app.app_context():
             beta = query("SELECT * FROM sponsors WHERE name='Beta'", one=True)
-            self.assertEqual(query("SELECT url FROM sponsors WHERE name='Alpha'", one=True)["url"], "https://alpha.co.za")
+            alpha = query("SELECT * FROM sponsors WHERE name='Alpha'", one=True)
+            self.assertEqual(alpha["url"], "https://alpha.co.za")
+            self.assertEqual(alpha["slug"], "alpha")
         self.client.post("/admin/sponsors", data={"_csrf": token, "action": "up", "sponsor_id": beta["id"]})
-        with self.app.app_context():
-            order = [r["name"] for r in query("SELECT name FROM sponsors ORDER BY sort_order")]
-        self.assertEqual(order, ["Beta", "Alpha"])
         home = self.client.get("/").get_data(as_text=True)
         self.assertLess(home.index('alt="Beta"'), home.index('alt="Alpha"'))
+        self.assertIn('href="/sponsors/alpha"', home)
+        # logo is served
+        self.assertEqual(self.client.get(f"/static/uploads/{alpha['logo']}").status_code, 200)
+        # hide from homepage only
+        self.client.post(f"/admin/sponsors/{alpha['id']}", data={"_csrf": token, "name": "Alpha", "active": "1"})
+        self.assertNotIn('alt="Alpha"', self.client.get("/").get_data(as_text=True))
+        self.assertIn("Alpha", self.client.get("/sponsors").get_data(as_text=True))
+        # hide everywhere via toggle
+        self.client.post("/admin/sponsors", data={"_csrf": token, "action": "toggle", "sponsor_id": alpha["id"]})
+        self.assertNotIn("Alpha", self.client.get("/sponsors").get_data(as_text=True))
+        self.assertEqual(self.client.get("/sponsors/alpha").status_code, 404)
+
+    def test_sponsor_allocation_to_projects(self):
+        self.submit_request()
+        p, token = self.approve()
+        self.client.post("/admin/sponsors/new", data={"_csrf": token, "name": "Corner Shop", "active": "1",
+                                                       "show_on_home": "1", "projects": str(p["id"]),
+                                                       f"amount_{p['id']}": "2500"})
+        with self.app.app_context():
+            sp = query("SELECT * FROM sponsors WHERE name='Corner Shop'", one=True)
+            link = query("SELECT * FROM project_sponsors", one=True)
+        self.assertEqual(link["amount_cents"], 250000)
+        page = self.client.get(f"/projects/{p['slug']}").get_data(as_text=True)
+        self.assertIn("Supported by", page)
+        self.assertIn("Corner Shop", page)
+        sp_page = self.client.get("/sponsors/corner-shop").get_data(as_text=True)
+        self.assertIn(p["title"], sp_page)
+        self.assertIn("R2\u00a0500", sp_page)
+        # unlink from the sponsor form, relink from the project page, then remove there
+        self.client.post(f"/admin/sponsors/{sp['id']}", data={"_csrf": token, "name": "Corner Shop", "active": "1"})
+        self.assertNotIn("supporters__list", self.client.get(f"/projects/{p['slug']}").get_data(as_text=True))
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "add_sponsor",
+                                                             "sponsor_id": sp["id"], "amount": "100"})
+        self.assertIn("Corner Shop", self.client.get(f"/projects/{p['slug']}").get_data(as_text=True))
+        self.assertIn("Corner Shop", self.client.get(f"/admin/projects/{p['id']}").get_data(as_text=True))
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "remove_sponsor",
+                                                             "sponsor_id": sp["id"]})
+        with self.app.app_context():
+            self.assertEqual(query("SELECT COUNT(*) n FROM project_sponsors", one=True)["n"], 0)
+        # deleting a sponsor cleans up its links
+        self.client.post(f"/admin/projects/{p['id']}", data={"_csrf": token, "action": "add_sponsor", "sponsor_id": sp["id"]})
+        self.client.post("/admin/sponsors", data={"_csrf": token, "action": "delete", "sponsor_id": sp["id"]})
+        with self.app.app_context():
+            self.assertEqual(query("SELECT COUNT(*) n FROM project_sponsors", one=True)["n"], 0)
+        self.assertEqual(self.client.get(f"/projects/{p['slug']}").status_code, 200)
+
+    def test_old_database_is_upgraded(self):
+        """A database created before sponsor pages and photo storage existed is upgraded on start."""
+        import sqlite3
+        path = os.path.join(self.tmp, "old.sqlite3")
+        conn = sqlite3.connect(path)
+        conn.executescript("CREATE TABLE sponsors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, logo TEXT, "
+                           "url TEXT NOT NULL DEFAULT '', blurb TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0, "
+                           "active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')));"
+                           "INSERT INTO sponsors(name, logo) VALUES ('Old Sponsor', 'sponsor-old.png');")
+        conn.close()
+        app = create_app({"TESTING": True, "DATABASE": path, "UPLOAD_FOLDER": os.path.join(self.tmp, "u2"),
+                          "PAYMENT_MODE": "demo"})
+        c = app.test_client()
+        self.assertEqual(c.get("/sponsors").status_code, 200)
+        self.assertIn("Old Sponsor", c.get("/sponsors").get_data(as_text=True))
+        self.assertEqual(c.get("/sponsors/old-sponsor").status_code, 200)
+        self.assertEqual(c.get("/static/uploads/sponsor-old.png").status_code, 404)  # missing file: 404, not 500
 
     def test_homepage_video_setting(self):
         token = self.login()
@@ -389,8 +454,7 @@ class SecurityTests(Base):
 
     def test_sponsor_rejects_javascript_links(self):
         token = self.login()
-        self.client.post("/admin/sponsors", data={"_csrf": token, "action": "create", "name": "X",
-                                                  "url": "javascript:alert(1)"})
+        self.client.post("/admin/sponsors/new", data={"_csrf": token, "name": "X", "url": "javascript:alert(1)"})
         with self.app.app_context():
             self.assertEqual(query("SELECT url FROM sponsors", one=True)["url"], "")
 

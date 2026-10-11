@@ -25,6 +25,16 @@
       {% if p.status == 'funding' %}
       <p class="deadline-line">{{ icon('clock', 18) }} <span>Funding closes <b>{{ p.deadline|nice_date }}</b>{% if p.days_left >= 0 %} ({{ 'today' if p.days_left == 0 else (p.days_left ~ ' day' ~ ('' if p.days_left == 1 else 's') ~ ' left') }}){% endif %}. If the goal isn’t reached by then, everyone is refunded in full.</span></p>
       {% endif %}
+      {% if supporters %}
+      <div class="supporters">
+        <p class="supporters__title">Supported by</p>
+        <ul class="supporters__list">
+          {% for sp in supporters %}
+          <li><a href="{{ url_for('public.sponsor_page', slug=sp.slug) if sp.slug else url_for('public.sponsors') }}">{% if sp.logo %}<img src="{{ url_for('static', filename='uploads/' ~ sp.logo) }}" alt="">{% endif %}<span>{{ sp.name }}{% if sp.amount_cents %}, {{ sp.amount_cents|rand }}{% endif %}</span></a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
       <div class="titlepage__phases">{{ phases(p) }}</div>
     </div>
   </div>

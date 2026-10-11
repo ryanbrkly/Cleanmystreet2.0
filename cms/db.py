@@ -196,6 +196,38 @@ def init_db():
     for key, value in DEFAULT_SETTINGS.items():
         conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)", (key, value))
     conn.commit()
+    migrate()
+
+
+# Columns added after the first release. Each is added once; existing data is kept.
+MIGRATIONS = [
+    ("sponsors", "slug", "TEXT"),
+    ("sponsors", "description", "TEXT NOT NULL DEFAULT ''"),
+    ("sponsors", "show_on_home", "INTEGER NOT NULL DEFAULT 1"),
+]
+
+
+def migrate():
+    conn = get_db()
+    for table, column, decl in MIGRATIONS:
+        cols = [r[1] if not isinstance(r, Mapping) else r["name"]
+                for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+        if column not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+    # give every sponsor a web address for its page
+    from .utils import slugify
+    for row in conn.execute("SELECT id, name FROM sponsors WHERE slug IS NULL OR slug = ''").fetchall():
+        conn.execute("UPDATE sponsors SET slug=? WHERE id=?", (unique_sponsor_slug(slugify(row["name"]), row["id"]), row["id"]))
+    conn.commit()
+
+
+def unique_sponsor_slug(base, sponsor_id=None):
+    slug, n = base or "sponsor", 2
+    while True:
+        hit = query("SELECT id FROM sponsors WHERE slug=?", (slug,), one=True)
+        if not hit or hit["id"] == sponsor_id:
+            return slug
+        slug, n = f"{base}-{n}", n + 1
 
 
 def query(sql, args=(), one=False):

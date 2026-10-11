@@ -48,6 +48,7 @@ def _placeholder_logo(label, colour):
 
 def seed_demo():
     init_db()
+    execute("INSERT OR REPLACE INTO settings(key, value) VALUES ('demo_seeded', '1')")
     if query("SELECT 1 FROM projects LIMIT 1", one=True):
         print("Projects already exist — skipping demo seed.")
         return
@@ -173,8 +174,20 @@ def seed_demo():
                 "Verge needs cutting back; a lot of dumped garden waste.", "Demo Requester", "demo7@example.com",
                 status="under_review")
 
-    for label, colour in (("Your Brand", (35, 48, 102)), ("Local Hero", (4, 50, 154)),
-                          ("Neighbour Co.", (44, 123, 182)), ("Green Partner", (102, 150, 30))):
-        execute("INSERT INTO sponsors(name, logo, url, blurb, sort_order, active) VALUES (?,?,?,?,?,1)",
-                (f"{label} (sample)", _placeholder_logo(label, colour), "", "Sample sponsor slot",
-                 query("SELECT COUNT(*) n FROM sponsors", one=True)["n"]))
+    from .db import unique_sponsor_slug
+    from .utils import slugify
+    demo_sponsors = [
+        ("Your Brand", (35, 48, 102), "A sample sponsor slot. Replace it with a real sponsor in Admin, Sponsors.", [p1, p3]),
+        ("Local Hero", (4, 50, 154), "A sample sponsor supporting monthly upkeep in Craighall.", [p4]),
+        ("Neighbour Co.", (44, 123, 182), "A sample sponsor slot.", [p2]),
+        ("Green Partner", (102, 150, 30), "A sample sponsor slot.", []),
+    ]
+    for order, (label, colour, about, linked) in enumerate(demo_sponsors):
+        name = f"{label} (sample)"
+        sid = execute("INSERT INTO sponsors(name, logo, url, blurb, description, sort_order, active, show_on_home, slug) "
+                      "VALUES (?,?,?,?,?,?,1,1,?)",
+                      (name, _placeholder_logo(label, colour), "", "Sample sponsor", about, order,
+                       unique_sponsor_slug(slugify(name))))
+        for pid in linked:
+            execute("INSERT INTO project_sponsors(project_id, sponsor_id, amount_cents) VALUES (?,?,?)",
+                    (pid, sid, 250000 if pid == p1 else 0))

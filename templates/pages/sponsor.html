@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "partials/ui.html" import project_card %}
+{% set title = s.name %}
+{% set description = (s.description or (s.name ~ ' supports community street cleaning with Clean My Street.'))|truncate(160) %}
+{% block main %}
+<section class="page-head">
+  <div class="wrap">
+    <div class="crumbs"><a href="{{ url_for('public.sponsors') }}">Sponsors</a> / {{ s.name }}</div>
+    <div class="sponsor-hero">
+      <div class="sponsor-hero__logo">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }} logo">{% else %}<b>{{ s.name }}</b>{% endif %}</div>
+      <div>
+        <h1>{{ s.name }}</h1>
+        {% if s.description %}<p class="lede" style="white-space:pre-line">{{ s.description }}</p>{% endif %}
+        <p class="muted">Supporting {{ projects|length }} street{{ '' if projects|length == 1 else 's' }}{% if total_cents %} with {{ total_cents|rand }} in contributions{% endif %}.</p>
+        {% if s.url %}<a class="btn btn--ghost btn--sm" href="{{ s.url }}" target="_blank" rel="noopener">Visit {{ s.url|replace('https://','')|replace('http://','')|replace('www.','')|truncate(40, True, '') }}</a>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    <h2>Streets supported by {{ s.name }}</h2>
+    {% if projects %}
+    <div class="albums">{% for p in projects %}{{ project_card(p) }}{% endfor %}</div>
+    {% else %}
+    <div class="empty"><h3>No streets linked yet</h3><p>Projects this sponsor supports will appear here.</p></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

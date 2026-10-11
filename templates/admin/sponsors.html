@@ -1,41 +1,42 @@
 {% extends "admin/base.html" %}
 {% set title = 'Sponsors' %}
 {% block main %}
-<div class="admin-top"><div><h1>Sponsors</h1><p class="muted" style="margin:4px 0 0">Shown on the homepage “Supported by” section and the Sponsors page, in this order.</p></div></div>
-<div class="agrid">
-  <section class="acard">
-    <h2>Current sponsors</h2>
-    {% if rows %}
-      {% for s in rows %}
-      <div class="sponsor-row">
-        <div class="logo">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }}">{% else %}<span class="tiny muted">No logo</span>{% endif %}</div>
-        <form class="inline" method="post" enctype="multipart/form-data">
-          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="update"><input type="hidden" name="sponsor_id" value="{{ s.id }}">
-          <input type="text" name="name" value="{{ s.name }}" aria-label="Sponsor name" required>
-          <input type="text" inputmode="url" name="url" value="{{ s.url }}" aria-label="Website link" placeholder="www.example.co.za">
-          <input type="file" name="logo" accept="image/*" aria-label="Replace logo">
-          <span class="actions-row"><label class="check small"><input type="checkbox" name="active" value="1"{% if s.active %} checked{% endif %}> <span>Show on site</span></label><button class="btn btn--ghost btn--sm" type="submit">Save</button></span>
-        </form>
-        <div class="actions-row">
-          {% for dir, label in [('up','Move up'),('down','Move down')] %}
-          <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="{{ dir }}"><input type="hidden" name="sponsor_id" value="{{ s.id }}"><button class="btn btn--ghost btn--sm" type="submit" aria-label="{{ label }}: {{ s.name }}">{{ '↑' if dir == 'up' else '↓' }}</button></form>
-          {% endfor %}
-          <form method="post" data-confirm="Remove {{ s.name }}?"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="sponsor_id" value="{{ s.id }}"><button class="link-btn small" style="color:var(--danger)" type="submit">Remove</button></form>
-        </div>
-      </div>
-      {% endfor %}
-    {% else %}<p class="muted" style="margin:0">No sponsors yet. Add the first one.</p>{% endif %}
-  </section>
-  <section class="acard">
-    <h2>Add a sponsor</h2>
-    <form method="post" enctype="multipart/form-data">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="create">
-      <div class="field" style="margin-bottom:10px"><label for="sn">Name</label><input id="sn" type="text" name="name" required></div>
-      <div class="field" style="margin-bottom:10px"><label for="su">Website <span class="muted small">(optional)</span></label><input id="su" type="text" inputmode="url" name="url" placeholder="www.example.co.za"></div>
-      <div class="field" style="margin-bottom:10px"><label for="sl">Logo</label><input id="sl" type="file" name="logo" accept="image/*"><div class="hint">PNG with a transparent background works best. Shown in greyscale until hovered.</div></div>
-      <div class="field" style="margin-bottom:14px"><label for="sb">Note <span class="muted small">(internal)</span></label><input id="sb" type="text" name="blurb" placeholder="e.g. Adopt-a-street, Northcliff, until Mar 2027"></div>
-      <button class="btn btn--primary btn--sm" type="submit">Add sponsor</button>
-    </form>
-  </section>
+<div class="admin-top">
+  <div><h1>Sponsors</h1><p class="muted" style="margin:4px 0 0">Shown on the Sponsors page, on the projects they support and, if you choose, on the homepage. Order here is the order on the site.</p></div>
+  <a class="btn btn--primary btn--sm" href="{{ url_for('admin.sponsor_edit') }}">Add a sponsor</a>
 </div>
+<section class="acard">
+  {% if rows %}
+  <div class="table-wrap"><table class="data sponsor-table">
+    <thead><tr><th>Logo</th><th>Sponsor</th><th>Projects</th><th>On website</th><th>Order</th><th></th></tr></thead>
+    <tbody>
+    {% for s in rows %}
+    <tr>
+      <td><span class="sponsor-thumb">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="">{% else %}<span class="tiny muted">No logo</span>{% endif %}</span></td>
+      <td><a href="{{ url_for('admin.sponsor_edit', sid=s.id) }}">{{ s.name }}</a>
+        <div class="tiny muted">{% if s.url %}{{ s.url|replace('https://','')|replace('http://','') }}{% else %}No website{% endif %}{% if s.blurb %} · {{ s.blurb }}{% endif %}</div></td>
+      <td>{{ s.project_count }}</td>
+      <td>
+        <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="toggle"><input type="hidden" name="sponsor_id" value="{{ s.id }}">
+          <button class="pill {{ 'pill--approved' if s.active else 'pill--pending' }}" style="border:0;cursor:pointer" type="submit" title="Click to {{ 'hide' if s.active else 'show' }}">{{ 'Shown' if s.active else 'Hidden' }}{% if s.active and s.show_on_home %}, homepage{% endif %}</button>
+        </form>
+      </td>
+      <td><div class="actions-row">
+        {% for dir, label, sym in [('up','Move up','↑'),('down','Move down','↓')] %}
+        <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="{{ dir }}"><input type="hidden" name="sponsor_id" value="{{ s.id }}"><button class="btn btn--ghost btn--sm" type="submit" aria-label="{{ label }}: {{ s.name }}">{{ sym }}</button></form>
+        {% endfor %}
+      </div></td>
+      <td><div class="actions-row">
+        <a class="btn btn--ghost btn--sm" href="{{ url_for('admin.sponsor_edit', sid=s.id) }}">Edit</a>
+        {% if s.slug %}<a class="btn btn--ghost btn--sm" href="{{ url_for('public.sponsor_page', slug=s.slug) }}" target="_blank">View page</a>{% endif %}
+        <form method="post" data-confirm="Remove {{ s.name }} from the website and all projects?"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="sponsor_id" value="{{ s.id }}"><button class="link-btn small" style="color:var(--danger)" type="submit">Remove</button></form>
+      </div></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="empty" style="margin:0"><h3>No sponsors yet</h3><p>Add a sponsor’s logo and website, then link them to the streets they support.</p><a class="btn btn--primary btn--sm" href="{{ url_for('admin.sponsor_edit') }}">Add the first sponsor</a></div>
+  {% endif %}
+</section>
 {% endblock %}

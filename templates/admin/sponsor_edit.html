@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% set title = s.name if s else 'Add a sponsor' %}
+{% block main %}
+<div class="admin-top">
+  <div><div class="crumbs"><a href="{{ url_for('admin.sponsors') }}">Sponsors</a> / {{ s.name if s else 'New' }}</div>
+  <h1>{{ s.name if s else 'Add a sponsor' }}</h1></div>
+  {% if s and s.slug %}<a class="btn btn--ghost btn--sm" href="{{ url_for('public.sponsor_page', slug=s.slug) }}" target="_blank">View public page</a>{% endif %}
+</div>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="agrid">
+    <div>
+      <section class="acard">
+        <h2>Details</h2>
+        <div class="form-grid">
+          <div class="field"><label for="sp-name">Sponsor name</label><input id="sp-name" type="text" name="name" value="{{ s.name if s else '' }}" required maxlength="100"></div>
+          <div class="field"><label for="sp-url">Website <span class="muted small">(optional)</span></label><input id="sp-url" type="text" inputmode="url" name="url" value="{{ s.url if s else '' }}" placeholder="www.example.co.za"></div>
+          <div class="field full"><label for="sp-desc">About this sponsor <span class="muted small">(shown on their page)</span></label><textarea id="sp-desc" name="description" rows="4" maxlength="1200" placeholder="e.g. Northcliff Hardware has served the area since 1987 and supports monthly upkeep on Beyers Naudé Drive.">{{ s.description if s else '' }}</textarea></div>
+          <div class="field full"><label for="sp-note">Internal note <span class="muted small">(team only)</span></label><input id="sp-note" type="text" name="blurb" value="{{ s.blurb if s else '' }}" maxlength="300" placeholder="e.g. Adopt-a-street agreement until March 2027"></div>
+        </div>
+      </section>
+
+      <section class="acard">
+        <h2>Projects this sponsor supports</h2>
+        {% if projects %}
+        <p class="small muted" style="margin-top:-6px">Tick each street. The sponsor’s logo appears on those project pages. The amount is shown publicly as their contribution; it does not change the funding goal, so lower the goal yourself if the sponsor is covering part of the cost.</p>
+        <div class="alloc">
+          {% for p in projects %}
+          {% set link = linked.get(p.id) %}
+          <div class="alloc__row">
+            <label class="check"><input type="checkbox" name="projects" value="{{ p.id }}"{% if link %} checked{% endif %}> <span><b>{{ p.title }}</b><br><span class="tiny muted">{{ p.location }} · {{ p.status_label }}</span></span></label>
+            <div class="alloc__amt"><label class="visually-hidden" for="amt-{{ p.id }}">Amount for {{ p.title }}</label><input id="amt-{{ p.id }}" type="text" inputmode="decimal" name="amount_{{ p.id }}" value="{{ (link.amount_cents / 100)|int if link and link.amount_cents else '' }}" placeholder="R amount (optional)"></div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}<p class="muted">No projects yet. Approve a request first, then come back to link the sponsor.</p>{% endif %}
+      </section>
+    </div>
+    <div>
+      <section class="acard">
+        <h2>Logo</h2>
+        {% if s and s.logo %}<div class="sponsor-thumb sponsor-thumb--lg"><img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="Current logo"></div>{% endif %}
+        <div class="field" style="margin-top:12px"><label for="sp-logo">{{ 'Replace logo' if s and s.logo else 'Upload logo' }}</label><input id="sp-logo" type="file" name="logo" accept="image/*"><div class="hint">PNG with a transparent background works best.</div></div>
+      </section>
+      <section class="acard">
+        <h2>Visibility</h2>
+        <label class="check" style="margin-bottom:10px"><input type="checkbox" name="active" value="1"{% if not s or s.active %} checked{% endif %}> <span>Show on the website</span></label>
+        <label class="check"><input type="checkbox" name="show_on_home" value="1"{% if not s or s.show_on_home %} checked{% endif %}> <span>Also show on the homepage</span></label>
+      </section>
+      <button class="btn btn--primary" type="submit">{{ 'Save sponsor' if s else 'Add sponsor' }}</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

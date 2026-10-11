@@ -121,9 +121,9 @@
     </div>
     <div class="sponsor-grid">
       {% for s in sponsors %}
-        {% if s.url %}<a class="sponsor" href="{{ s.url }}" target="_blank" rel="noopener" title="{{ s.name }}">{% else %}<div class="sponsor" title="{{ s.name }}">{% endif %}
+        <a class="sponsor" href="{{ url_for('public.sponsor_page', slug=s.slug) if s.slug else url_for('public.sponsors') }}" title="{{ s.name }}">
           {% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }}" loading="lazy">{% else %}<b>{{ s.name }}</b>{% endif %}
-        {% if s.url %}</a>{% else %}</div>{% endif %}
+        </a>
       {% endfor %}
       <a class="sponsor sponsor--join" href="{{ url_for('public.sponsors') }}">Your logo here<span>Sponsor a street in your area</span></a>
     </div>

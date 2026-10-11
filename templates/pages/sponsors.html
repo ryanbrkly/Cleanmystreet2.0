@@ -4,36 +4,43 @@
 {% block main %}
 <section class="page-head">
   <div class="wrap">
-    <h1>Put your name on a cleaner neighbourhood</h1>
-    <p class="lede">Sponsors help cover cleans near their shops, offices and estates — and are thanked on every project page they support and on our homepage.</p>
+    <h1>The sponsors behind cleaner streets</h1>
+    <p class="lede">Local businesses and associations who help cover cleans in their neighbourhoods. Tap a sponsor to see the streets they support.</p>
   </div>
 </section>
 <section class="section">
   <div class="wrap">
     {% if sponsors %}
-    <div class="section-head"><h2>Our sponsors</h2></div>
-    <div class="sponsor-grid" style="margin-bottom:64px">
+    <div class="sponsor-cards">
       {% for s in sponsors %}
-        {% if s.url %}<a class="sponsor" href="{{ s.url }}" target="_blank" rel="noopener">{% else %}<div class="sponsor">{% endif %}
-          {% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }}">{% else %}<b>{{ s.name }}</b>{% endif %}
-        {% if s.url %}</a>{% else %}</div>{% endif %}
+      <a class="sponsor-card" href="{{ url_for('public.sponsor_page', slug=s.slug) if s.slug else '#' }}">
+        <span class="sponsor-card__logo">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="{{ s.name }} logo" loading="lazy">{% else %}<b>{{ s.name }}</b>{% endif %}</span>
+        <h3>{{ s.name }}</h3>
+        {% if s.description %}<p>{{ s.description|truncate(140) }}</p>{% endif %}
+        <p><b style="color:var(--ink)">{{ s.project_count }}</b> street{{ '' if s.project_count == 1 else 's' }} supported</p>
+      </a>
       {% endfor %}
     </div>
+    {% else %}
+    <div class="empty"><h3>Be our first sponsor</h3><p>Your business could be the first name on this page.</p></div>
     {% endif %}
-    <div class="two-col">
-      <div>
-        <h2>Ways to sponsor</h2>
-        <div class="values" style="grid-template-columns:1fr">
-          <div><h3>Top up a street</h3><p>Close the gap on a project near you that’s almost funded.</p></div>
-          <div><h3>Adopt a street</h3><p>Fund the monthly upkeep of a road outside your business, with your logo on the site sign.</p></div>
-          <div><h3>Area partner</h3><p>Support a set number of cleans across a suburb each quarter, with homepage placement.</p></div>
-        </div>
+  </div>
+</section>
+<section class="section section--paving">
+  <div class="wrap two-col">
+    <div>
+      <h2>Ways to sponsor</h2>
+      <div class="values" style="grid-template-columns:1fr">
+        <div><h3>Top up a street</h3><p>Close the gap on a project near you that’s almost funded.</p></div>
+        <div><h3>Adopt a street</h3><p>Fund the monthly upkeep of a road outside your business, with your logo on the project page and the site sign.</p></div>
+        <div><h3>Area partner</h3><p>Support a set number of cleans across a suburb each quarter, with homepage placement.</p></div>
       </div>
-      <div class="panel panel--paving">
-        <h3>Talk to us</h3>
-        <p>Tell us your area and budget and we’ll suggest streets that would benefit most.</p>
-        <a class="btn btn--primary" href="mailto:{{ site.contact_email }}?subject=Sponsoring%20Clean%20My%20Street">Email {{ site.contact_email }}</a>
-      </div>
+    </div>
+    <div class="panel">
+      <h3>Talk to us</h3>
+      <p>Tell us your area and budget and we’ll suggest streets that would benefit most.</p>
+      <p><b>{{ site.contact_email }}</b></p>
+      <a class="btn btn--primary" href="mailto:{{ site.contact_email }}?subject=Sponsoring%20Clean%20My%20Street">Email us about sponsoring</a>
     </div>
   </div>
 </section>

@@ -109,7 +109,11 @@ def create_app(test_config=None):
     @app.route("/static/uploads/<path:filename>")
     def uploaded_file(filename):
         from flask import Response, abort
-        row = db.load_media(os.path.basename(filename))
+        try:
+            row = db.load_media(os.path.basename(filename))
+        except Exception:  # noqa: BLE001 - e.g. an old database without the media table
+            app.logger.exception("Could not load media %s", filename)
+            row = None
         if row:
             resp = Response(bytes(row["data"]), mimetype=row["mime"])
             resp.headers["Cache-Control"] = "public, max-age=604800, immutable"
@@ -240,15 +244,17 @@ def create_app(test_config=None):
 
 
 def _ensure_database(app):
-    """Create tables on first use; on serverless hosts also load demo data and an admin."""
+    """Bring the database up to date on every cold start (safe to repeat).
+
+    Creates missing tables, adds new columns to older databases, and on a brand-new
+    database optionally loads the demo data.
+    """
     from .db import query
-    try:
-        query("SELECT 1 FROM projects LIMIT 1")
-    except Exception:  # noqa: BLE001 - table missing on a fresh database
-        db.init_db()
-        if app.config["SEED_DEMO"]:
-            from .seed import seed_demo
-            seed_demo()
+    db.init_db()  # also applies migrations
+    already = query("SELECT value FROM settings WHERE key='demo_seeded'", one=True)
+    if app.config["SEED_DEMO"] and not already:
+        from .seed import seed_demo
+        seed_demo()  # runs once per database; deleting the sample projects later won't bring them back
     email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
     password = os.environ.get("ADMIN_PASSWORD", "")
     if email and password and not query("SELECT 1 FROM admins WHERE email=?", (email,), one=True):

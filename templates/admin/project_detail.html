@@ -169,6 +169,33 @@
       </form>
     </section>
     {% endif %}
+    <section class="acard" id="sponsors">
+      <h2>Sponsors <a class="small" href="{{ url_for('admin.sponsors') }}">Manage sponsors</a></h2>
+      {% if project_sponsors %}
+      <ul class="ps-list">
+        {% for s in project_sponsors %}
+        <li>
+          <span class="sponsor-thumb">{% if s.logo %}<img src="{{ url_for('static', filename='uploads/' ~ s.logo) }}" alt="">{% endif %}</span>
+          <span><a href="{{ url_for('admin.sponsor_edit', sid=s.id) }}"><b>{{ s.name }}</b></a>{% if s.amount_cents %}<br><span class="tiny muted">Contributing {{ s.amount_cents|rand }}</span>{% endif %}</span>
+          <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="remove_sponsor"><input type="hidden" name="sponsor_id" value="{{ s.id }}"><input type="hidden" name="anchor" value="sponsors"><button class="link-btn small" type="submit">Remove</button></form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="small muted">No sponsors on this project yet.</p>{% endif %}
+      {% set linked_ids = project_sponsors|map(attribute='id')|list %}
+      {% set available = all_sponsors|rejectattr('id', 'in', linked_ids)|list %}
+      {% if available %}
+      <form method="post" class="ps-add">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_sponsor"><input type="hidden" name="anchor" value="sponsors">
+        <div class="field"><label for="ps-s">Add a sponsor</label><select id="ps-s" name="sponsor_id">{% for s in available %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="ps-a">Amount <span class="muted small">(optional)</span></label><input id="ps-a" type="text" inputmode="decimal" name="amount" placeholder="R"></div>
+        <button class="btn btn--primary btn--sm" type="submit">Add</button>
+      </form>
+      {% elif not all_sponsors %}
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('admin.sponsor_edit') }}">Add your first sponsor</a>
+      {% endif %}
+    </section>
+
     <section class="acard" id="delete" style="border-color:#f1c4c6">
       <h2>Delete project</h2>
       {% set held = contributions|selectattr('status', 'in', ['paid', 'refund_pending'])|list %}

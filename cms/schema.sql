@@ -158,3 +158,13 @@ CREATE TABLE IF NOT EXISTS media (
     data        BLOB NOT NULL,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Which sponsors support which projects (many-to-many).
+CREATE TABLE IF NOT EXISTS project_sponsors (
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    sponsor_id    INTEGER NOT NULL REFERENCES sponsors(id) ON DELETE CASCADE,
+    amount_cents  INTEGER NOT NULL DEFAULT 0,
+    note          TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (project_id, sponsor_id)
+);

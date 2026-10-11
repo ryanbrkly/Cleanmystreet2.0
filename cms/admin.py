@@ -374,6 +374,17 @@ def project_detail(pid):
             else:
                 flash("Refund could not be issued — see the contribution status.", "error")
 
+        elif action == "add_sponsor":
+            sponsor_id = f.get("sponsor_id", type=int)
+            if sponsor_id and query("SELECT 1 FROM sponsors WHERE id=?", (sponsor_id,), one=True):
+                execute("INSERT OR REPLACE INTO project_sponsors(project_id, sponsor_id, amount_cents) VALUES (?,?,?)",
+                        (pid, sponsor_id, parse_rand(f.get("amount"))))
+                flash("Sponsor added to this project.", "success")
+
+        elif action == "remove_sponsor":
+            execute("DELETE FROM project_sponsors WHERE project_id=? AND sponsor_id=?", (pid, f.get("sponsor_id", type=int)))
+            flash("Sponsor removed from this project.", "success")
+
         elif action == "delete_project":
             held = query("SELECT COUNT(*) n FROM contributions WHERE project_id=? AND status IN ('paid','refund_pending')",
                          (pid,), one=True)["n"]
@@ -390,6 +401,7 @@ def project_detail(pid):
                 delete_upload(p["cover_image"])
             execute("DELETE FROM updates WHERE project_id=?", (pid,))
             execute("DELETE FROM contributions WHERE project_id=?", (pid,))
+            execute("DELETE FROM project_sponsors WHERE project_id=?", (pid,))
             execute("UPDATE projects SET parent_id=NULL WHERE parent_id=?", (pid,))
             execute("UPDATE requests SET project_id=NULL, status='rejected', admin_note=?, updated_at=? WHERE project_id=?",
                     ("Project removed by Clean My Street.", now_iso(), pid))
@@ -412,7 +424,11 @@ def project_detail(pid):
     updates = query("SELECT * FROM updates WHERE project_id=? ORDER BY created_at DESC, id DESC", (pid,))
     contributions = query("SELECT * FROM contributions WHERE project_id=? ORDER BY created_at DESC", (pid,))
     req = query("SELECT * FROM requests WHERE id=?", (p["request_id"],), one=True) if p["request_id"] else None
+    project_sponsors = query("SELECT s.*, ps.amount_cents FROM project_sponsors ps JOIN sponsors s ON s.id=ps.sponsor_id "
+                             "WHERE ps.project_id=? ORDER BY s.sort_order, s.id", (pid,))
+    all_sponsors = query("SELECT id, name FROM sponsors ORDER BY name")
     return render_template("admin/project_detail.html", p=p, updates=updates, contributions=contributions,
+                           project_sponsors=project_sponsors, all_sponsors=all_sponsors,
                            req=req, items_text=line_items_text(p["line_items_list"]),
                            public_url=project_url(p))
 
@@ -423,56 +439,85 @@ def project_detail(pid):
 @bp.route("/sponsors", methods=["GET", "POST"])
 @login_required
 def sponsors():
+    """Sponsor list: reorder, show/hide, delete. Adding and editing happen on the sponsor form."""
     if request.method == "POST":
         f = request.form
         action = f.get("action")
-        sid = f.get("sponsor_id")
-        if action in ("create", "update"):
-            logo = None
-            if request.files.get("logo") and request.files["logo"].filename:
-                try:
-                    logo = save_image(request.files["logo"], max_side=600, prefix="sponsor")
-                except ValueError as exc:
-                    flash(str(exc), "error")
-                    return redirect(url_for("admin.sponsors"))
-            url = safe_url(f.get("url"))
-            if action == "create":
-                if not f.get("name", "").strip():
-                    flash("Sponsor name is required.", "error")
-                    return redirect(url_for("admin.sponsors"))
-                order = query("SELECT COALESCE(MAX(sort_order),0)+1 n FROM sponsors", one=True)["n"]
-                execute("INSERT INTO sponsors(name, logo, url, blurb, sort_order, active) VALUES (?,?,?,?,?,1)",
-                        (f["name"].strip(), logo, url, f.get("blurb", "").strip(), order))
-                flash("Sponsor added to the homepage.", "success")
-            else:
-                s = query("SELECT * FROM sponsors WHERE id=?", (sid,), one=True)
-                if s:
-                    if logo:
-                        delete_upload(s["logo"])
-                    execute("UPDATE sponsors SET name=?, url=?, blurb=?, logo=COALESCE(?, logo), active=? WHERE id=?",
-                            (f.get("name", s["name"]).strip(), url, f.get("blurb", "").strip(), logo,
-                             1 if f.get("active") else 0, sid))
-                    flash("Sponsor saved.", "success")
-        elif action in ("up", "down"):
-            rows = list(query("SELECT id FROM sponsors ORDER BY sort_order, id"))
-            ids = [r["id"] for r in rows]
-            if int(sid) in ids:
-                i = ids.index(int(sid))
-                j = i - 1 if action == "up" else i + 1
-                if 0 <= j < len(ids):
-                    ids[i], ids[j] = ids[j], ids[i]
-                for n, x in enumerate(ids):
-                    execute("UPDATE sponsors SET sort_order=? WHERE id=?", (n, x))
-        elif action == "delete":
-            s = query("SELECT * FROM sponsors WHERE id=?", (sid,), one=True)
-            if s:
-                delete_upload(s["logo"])
-                execute("DELETE FROM sponsors WHERE id=?", (sid,))
-                flash("Sponsor removed.", "success")
-        log_activity(f"sponsor_{action}", str(sid or f.get("name", "")))
+        sid = f.get("sponsor_id", type=int)
+        s = query("SELECT * FROM sponsors WHERE id=?", (sid,), one=True) if sid else None
+        if action in ("up", "down") and s:
+            ids = [r["id"] for r in query("SELECT id FROM sponsors ORDER BY sort_order, id")]
+            i = ids.index(sid)
+            j = i - 1 if action == "up" else i + 1
+            if 0 <= j < len(ids):
+                ids[i], ids[j] = ids[j], ids[i]
+            for n, x in enumerate(ids):
+                execute("UPDATE sponsors SET sort_order=? WHERE id=?", (n, x))
+        elif action == "toggle" and s:
+            execute("UPDATE sponsors SET active=? WHERE id=?", (0 if s["active"] else 1, sid))
+            flash(f"{s['name']} is now {'hidden' if s['active'] else 'shown'} on the website.", "success")
+        elif action == "delete" and s:
+            delete_upload(s["logo"])
+            execute("DELETE FROM project_sponsors WHERE sponsor_id=?", (sid,))
+            execute("DELETE FROM sponsors WHERE id=?", (sid,))
+            flash(f"{s['name']} removed.", "success")
+        log_activity(f"sponsor_{action}", s["name"] if s else "")
         return redirect(url_for("admin.sponsors"))
-    rows = query("SELECT * FROM sponsors ORDER BY sort_order, id")
+    rows = query("""SELECT s.*, (SELECT COUNT(*) FROM project_sponsors ps WHERE ps.sponsor_id=s.id) AS project_count
+                    FROM sponsors s ORDER BY s.sort_order, s.id""")
     return render_template("admin/sponsors.html", rows=rows)
+
+
+@bp.route("/sponsors/new", methods=["GET", "POST"])
+@bp.route("/sponsors/<int:sid>", methods=["GET", "POST"])
+@login_required
+def sponsor_edit(sid=None):
+    from .db import unique_sponsor_slug
+    from .utils import slugify
+    s = query("SELECT * FROM sponsors WHERE id=?", (sid,), one=True) if sid else None
+    if sid and not s:
+        abort(404)
+    projects = [project_view(r) for r in query(
+        "SELECT * FROM projects WHERE status NOT IN ('cancelled','failed') ORDER BY status='completed', created_at DESC")]
+    linked = {r["project_id"]: r for r in query("SELECT * FROM project_sponsors WHERE sponsor_id=?", (sid,))} if sid else {}
+    if request.method == "POST":
+        f = request.form
+        name = clean_text(f.get("name"), 100)
+        if not name:
+            flash("Give the sponsor a name.", "error")
+            return redirect(request.url)
+        logo = None
+        if request.files.get("logo") and request.files["logo"].filename:
+            try:
+                logo = save_image(request.files["logo"], max_side=600, prefix="sponsor")
+            except ValueError as exc:
+                flash(str(exc), "error")
+                return redirect(request.url)
+        data = (name, safe_url(f.get("url")), clean_text(f.get("description"), 1200, multiline=True),
+                clean_text(f.get("blurb"), 300), 1 if f.get("active") else 0, 1 if f.get("show_on_home") else 0)
+        if s:
+            if logo:
+                delete_upload(s["logo"])
+            execute("UPDATE sponsors SET name=?, url=?, description=?, blurb=?, active=?, show_on_home=?, "
+                    "logo=COALESCE(?, logo) WHERE id=?", data + (logo, sid))
+        else:
+            order = query("SELECT COALESCE(MAX(sort_order),0)+1 n FROM sponsors", one=True)["n"]
+            sid = execute("INSERT INTO sponsors(name, url, description, blurb, active, show_on_home, logo, sort_order, slug) "
+                          "VALUES (?,?,?,?,?,?,?,?,?)", data + (logo, order, unique_sponsor_slug(slugify(name))))
+        # project allocations
+        chosen = set(f.getlist("projects", type=int))
+        for pid_ in chosen:
+            amount = parse_rand(f.get(f"amount_{pid_}"))
+            if query("SELECT 1 FROM project_sponsors WHERE project_id=? AND sponsor_id=?", (pid_, sid), one=True):
+                execute("UPDATE project_sponsors SET amount_cents=? WHERE project_id=? AND sponsor_id=?", (amount, pid_, sid))
+            else:
+                execute("INSERT INTO project_sponsors(project_id, sponsor_id, amount_cents) VALUES (?,?,?)", (pid_, sid, amount))
+        for pid_ in set(linked) - chosen:
+            execute("DELETE FROM project_sponsors WHERE project_id=? AND sponsor_id=?", (pid_, sid))
+        log_activity("sponsor_saved", f"{name}: {len(chosen)} project(s)")
+        flash(f"{name} saved.", "success")
+        return redirect(url_for("admin.sponsors"))
+    return render_template("admin/sponsor_edit.html", s=s, projects=projects, linked=linked)
 
 
 # ---------------------------------------------------------------- settings

@@ -47,7 +47,7 @@ def home():
         "ORDER BY CASE status WHEN 'funding' THEN 0 ELSE 1 END, deadline LIMIT 3")]
     completed = [project_view(r) for r in query(
         "SELECT * FROM projects WHERE status='completed' ORDER BY completed_at DESC LIMIT 3")]
-    sponsors = query("SELECT * FROM sponsors WHERE active=1 ORDER BY sort_order, id")
+    sponsors = query("SELECT * FROM sponsors WHERE active=1 AND show_on_home=1 ORDER BY sort_order, id")
     return render_template(
         "pages/home.html",
         stats=public_stats(),
@@ -94,8 +94,10 @@ def project(slug):
     rounds = query("SELECT slug, round_no, status FROM projects WHERE request_id=? AND request_id IS NOT NULL "
                    "ORDER BY round_no", (p["request_id"],)) if p["request_id"] else []
     presets = sorted({max(p["min_contribution_cents"], v) for v in (10000, 25000, 50000, 100000)})
+    supporters = query("SELECT s.*, ps.amount_cents FROM project_sponsors ps JOIN sponsors s ON s.id=ps.sponsor_id "
+                       "WHERE ps.project_id=? AND s.active=1 ORDER BY s.sort_order, s.id", (p["id"],))
     return render_template("pages/project.html", p=p, updates=updates, backers=backers,
-                           presets=presets, rounds=rounds)
+                           presets=presets, rounds=rounds, supporters=supporters)
 
 
 @bp.route("/how-it-works")
@@ -110,8 +112,24 @@ def about():
 
 @bp.route("/sponsors")
 def sponsors():
-    items = query("SELECT * FROM sponsors WHERE active=1 ORDER BY sort_order, id")
+    items = query("""SELECT s.*, (SELECT COUNT(*) FROM project_sponsors ps JOIN projects p ON p.id=ps.project_id
+                                 WHERE ps.sponsor_id=s.id AND p.status NOT IN ('cancelled','failed')) AS project_count
+                     FROM sponsors s WHERE s.active=1 ORDER BY s.sort_order, s.id""")
     return render_template("pages/sponsors.html", sponsors=items)
+
+
+@bp.route("/sponsors/<slug>")
+def sponsor_page(slug):
+    s = query("SELECT * FROM sponsors WHERE slug=? AND active=1", (slug,), one=True)
+    if not s:
+        abort(404)
+    rows = query("""SELECT p.*, ps.amount_cents AS sponsor_cents FROM project_sponsors ps JOIN projects p ON p.id=ps.project_id
+                    WHERE ps.sponsor_id=? AND p.status NOT IN ('cancelled','failed')
+                    ORDER BY CASE p.status WHEN 'funding' THEN 0 WHEN 'completed' THEN 2 ELSE 1 END, p.created_at DESC""",
+                 (s["id"],))
+    projects = [project_view(r) for r in rows]
+    total = sum(r["sponsor_cents"] or 0 for r in rows)
+    return render_template("pages/sponsor.html", s=s, projects=projects, total_cents=total)
 
 
 @bp.route("/privacy")
@@ -401,6 +419,7 @@ def robots():
 def sitemap():
     base = current_app.config["PUBLIC_BASE_URL"] or request.host_url.rstrip("/")
     paths = ["/", "/projects", "/how-it-works", "/about", "/request", "/sponsors", "/privacy", "/terms"]
+    paths += [f"/sponsors/{r['slug']}" for r in query("SELECT slug FROM sponsors WHERE active=1 AND slug IS NOT NULL")]
     paths += [f"/projects/{r['slug']}" for r in query(
         "SELECT slug FROM projects WHERE status NOT IN ('cancelled')")]
     urls = "".join(f"<url><loc>{base}{p}</loc></url>" for p in paths)

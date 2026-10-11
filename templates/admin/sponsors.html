@@ -12,7 +12,7 @@
         <form class="inline" method="post" enctype="multipart/form-data">
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="update"><input type="hidden" name="sponsor_id" value="{{ s.id }}">
           <input type="text" name="name" value="{{ s.name }}" aria-label="Sponsor name" required>
-          <input type="url" name="url" value="{{ s.url }}" aria-label="Website link" placeholder="https://">
+          <input type="text" inputmode="url" name="url" value="{{ s.url }}" aria-label="Website link" placeholder="www.example.co.za">
           <input type="file" name="logo" accept="image/*" aria-label="Replace logo">
           <span class="actions-row"><label class="check small"><input type="checkbox" name="active" value="1"{% if s.active %} checked{% endif %}> <span>Show on site</span></label><button class="btn btn--ghost btn--sm" type="submit">Save</button></span>
         </form>
@@ -31,7 +31,7 @@
     <form method="post" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="create">
       <div class="field" style="margin-bottom:10px"><label for="sn">Name</label><input id="sn" type="text" name="name" required></div>
-      <div class="field" style="margin-bottom:10px"><label for="su">Website <span class="muted small">(optional)</span></label><input id="su" type="url" name="url" placeholder="https://"></div>
+      <div class="field" style="margin-bottom:10px"><label for="su">Website <span class="muted small">(optional)</span></label><input id="su" type="text" inputmode="url" name="url" placeholder="www.example.co.za"></div>
       <div class="field" style="margin-bottom:10px"><label for="sl">Logo</label><input id="sl" type="file" name="logo" accept="image/*"><div class="hint">PNG with a transparent background works best. Shown in greyscale until hovered.</div></div>
       <div class="field" style="margin-bottom:14px"><label for="sb">Note <span class="muted small">(internal)</span></label><input id="sb" type="text" name="blurb" placeholder="e.g. Adopt-a-street, Northcliff, until Mar 2027"></div>
       <button class="btn btn--primary btn--sm" type="submit">Add sponsor</button>

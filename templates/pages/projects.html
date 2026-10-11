@@ -25,7 +25,7 @@
       </form>
     </div>
     {% if items %}
-      <div class="cards">{% for p in items %}{{ project_card(p) }}{% endfor %}</div>
+      <div class="albums">{% for p in items %}{{ project_card(p) }}{% endfor %}</div>
     {% else %}
       <div class="empty">
         <h3>{% if q %}No projects match “{{ q }}”{% else %}Nothing here yet{% endif %}</h3>

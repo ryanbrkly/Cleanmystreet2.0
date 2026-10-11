@@ -14,12 +14,13 @@ from .db import execute, get_settings, log_activity, now_iso, query, set_setting
 from .services import (REQUEST_STATUS_LABELS, STATUS_LABELS, close_and_refund, create_project_from_request,
                        email_backers, get_project, open_next_monthly_round, process_expired_projects,
                        project_url, project_view, refund_contribution)
-from .utils import (delete_upload, line_items_text, load_json, parse_line_items, parse_rand, rand,
+from .utils import (clean_text, delete_upload, safe_url, line_items_text, load_json, parse_line_items, parse_rand, rand,
                     save_image, youtube_id)
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 _login_attempts = {}
+_DUMMY_HASH = "scrypt:32768:8:1$dummysaltvalue12$" + "0" * 128
 
 
 def login_required(view):
@@ -61,7 +62,10 @@ def login():
             return render_template("admin/login.html"), 429
         email = request.form.get("email", "").strip().lower()
         admin = query("SELECT * FROM admins WHERE email=?", (email,), one=True)
-        if admin and check_password_hash(admin["password_hash"], request.form.get("password", "")):
+        # Always run a hash check so response time doesn't reveal whether the email exists.
+        hash_to_check = admin["password_hash"] if admin else _DUMMY_HASH
+        password_ok = check_password_hash(hash_to_check, request.form.get("password", ""))
+        if admin and password_ok:
             session.clear()
             session["admin_id"] = admin["id"]
             session.permanent = True
@@ -305,7 +309,7 @@ def project_detail(pid):
             flash(f"Project cancelled. {ok} of {total} contributions refunded.", "success")
 
         elif action == "add_photos":
-            files = [fs for fs in request.files.getlist("photos") if fs and fs.filename]
+            files = [fs for fs in request.files.getlist("photos") if fs and fs.filename][:20]
             if not files:
                 flash("Choose at least one photo.", "error")
             saved = 0
@@ -395,9 +399,7 @@ def sponsors():
                 except ValueError as exc:
                     flash(str(exc), "error")
                     return redirect(url_for("admin.sponsors"))
-            url = f.get("url", "").strip()
-            if url and not url.startswith(("http://", "https://")):
-                url = "https://" + url
+            url = safe_url(f.get("url"))
             if action == "create":
                 if not f.get("name", "").strip():
                     flash("Sponsor name is required.", "error")

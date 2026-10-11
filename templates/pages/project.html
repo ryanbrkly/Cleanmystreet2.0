@@ -1,21 +1,29 @@
 {% extends "base.html" %}
-{% from "partials/ui.html" import icon, tape, phases, status_pill, youtube, flashes %}
+{% from "partials/ui.html" import icon, tape, phases, status_pill, youtube, flashes, plate %}
 {% set title = p.title %}
 {% set description = p.summary ~ ' ' ~ p.pct ~ '% funded — ' ~ (p.raised_cents|rand) ~ ' of ' ~ (p.goal_cents|rand) ~ '.' %}
 {% set og_image = url_for('static', filename='uploads/' ~ p.cover_image) if p.cover_image else None %}
 {% set share_url = base_url ~ url_for('public.project', slug=p.slug) %}
 {% set share_text = 'Help clean ' ~ p.street_name ~ '! We\'re ' ~ p.pct ~ '% of the way there. Every household chipping in gets it done — and if we don\'t reach the goal, everyone is refunded: ' ~ share_url %}
 {% block main %}
-<section class="page-head">
+{# Title page: the cover photograph full width, then the project's title and progress #}
+{% if p.cover_image %}
+<div class="cover__photo cover__photo--project">
+  <img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="{{ p.street_name }}">
+</div>
+{% endif %}
+<section class="titlepage{% if not p.cover_image %} titlepage--plain{% endif %}">
   <div class="wrap">
-    <div class="crumbs"><a href="{{ url_for('public.projects') }}">Projects</a> / {{ p.location }}</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      {{ status_pill(p) }}
-      <span class="pill {{ 'pill--monthly' if p.service_type == 'monthly' else '' }}">{{ 'Monthly upkeep' ~ (' · month ' ~ p.round_no if p.round_no > 1 else '') if p.service_type == 'monthly' else 'Once-off clean' }}</span>
+    <div class="titlepage__card">
+      <div class="crumbs"><a href="{{ url_for('public.projects') }}">Projects</a> / {{ p.location }}</div>
+      <div class="titlepage__pills">
+        {{ status_pill(p) }}
+        <span class="pill {{ 'pill--monthly' if p.service_type == 'monthly' else '' }}">{{ ('Monthly upkeep, month ' ~ p.round_no) if p.service_type == 'monthly' else 'Once-off clean' }}</span>
+      </div>
+      <h1>{{ p.title }}</h1>
+      <p class="titlepage__where">{{ icon('pin', 18) }} {{ p.street_name }}{% if p.location %}, {{ p.location }}{% endif %}</p>
+      <div class="titlepage__phases">{{ phases(p) }}</div>
     </div>
-    <h1>{{ p.title }}</h1>
-    <p class="lede" style="display:flex;gap:8px;align-items:center">{{ icon('pin', 20) }} {{ p.street_name }}{% if p.location %}, {{ p.location }}{% endif %}</p>
-    <div style="margin-top:32px">{{ phases(p) }}</div>
   </div>
 </section>
 
@@ -23,9 +31,7 @@
   <div class="wrap">
     {{ flashes() }}
     <div class="proj-grid">
-      <div>
-        {% if p.cover_image %}<img class="proj-cover" src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="{{ p.street_name }}">{% endif %}
-
+      <div class="story">
         {% if p.status in ('failed', 'cancelled') %}
         <div class="flash flash--info" style="margin-bottom:28px">
           {% if p.status == 'failed' %}This street didn’t reach its goal by {{ p.deadline|nice_date }}. Every contributor has been refunded in full.{% else %}This project was cancelled{% if p.closed_reason %} ({{ p.closed_reason }}){% endif %}. Every contributor has been refunded in full.{% endif %}
@@ -36,8 +42,19 @@
         <p class="lede">{{ p.summary }}</p>
         {% if p.scope %}<p>{{ p.scope }}</p>{% endif %}
 
+        {# Before-and-after spread, when both exist #}
+        {% set befores = updates|selectattr('phase', 'equalto', 'before')|selectattr('kind', 'equalto', 'photo')|list %}
+        {% set afters = updates|selectattr('phase', 'equalto', 'after')|selectattr('kind', 'equalto', 'photo')|list %}
+        {% if befores and afters %}
+        <div class="beforeafter">
+          {% set b = befores|last %}{% set a = afters|first %}
+          {{ plate(url_for('static', filename='uploads/' ~ b.image), url_for('static', filename='uploads/' ~ b.image), (b.title if (b.title or '').lower().startswith('before') else 'Before: ' ~ (b.title or p.street_name))) }}
+          {{ plate(url_for('static', filename='uploads/' ~ a.image), url_for('static', filename='uploads/' ~ a.image), (a.title if (a.title or '').lower().startswith('after') else 'After: ' ~ (a.title or p.street_name))) }}
+        </div>
+        {% endif %}
+
         {% if p.line_items_list %}
-        <h3 style="margin-top:32px">The quote</h3>
+        <h3 style="margin-top:40px">The quote</h3>
         <table class="quote-table">
           {% for item in p.line_items_list %}
           <tr><td>{{ item.label }}</td><td>{{ item.cents|rand if item.cents else '' }}</td></tr>
@@ -47,36 +64,36 @@
         <p class="small muted" style="margin-top:10px">All prices include VAT where applicable, labour, equipment, traffic safety and legal disposal of waste.</p>
         {% endif %}
 
-        <h2 style="margin-top:56px">Progress updates</h2>
+        {# The photo story, told in chapters #}
+        <h2 style="margin-top:64px">The story so far</h2>
         {% if updates %}
-          {% set phases_present = updates|map(attribute='phase')|unique|list %}
-          {% if phases_present|length > 1 %}
-          <div class="feed-filter" role="group" aria-label="Filter updates">
-            <button type="button" data-phase="all" aria-pressed="true">All</button>
-            {% for ph in ('before', 'during', 'after') if ph in phases_present %}<button type="button" data-phase="{{ ph }}" aria-pressed="false">{{ ph|capitalize }}</button>{% endfor %}
-          </div>
-          {% endif %}
-          <div class="feed">
-            {% for u in updates %}
-            <article class="feed-item" data-phase="{{ u.phase }}">
-              <div class="feed-item__when">{{ u.created_at|nice_datetime }}{% if u.phase != 'general' %}<br><span class="pill" style="margin-top:6px">{{ u.phase|capitalize }}</span>{% endif %}</div>
-              <div>
-                {% if u.title %}<h3 style="margin-bottom:6px">{{ u.title }}</h3>{% endif %}
-                {% if u.body %}<p style="margin:0">{{ u.body }}</p>{% endif %}
-                {% if u.kind == 'photo' and u.image %}
+          {% for ph, heading in [('before', 'Before'), ('during', 'On the day'), ('after', 'After'), ('general', 'Notes from the team')] %}
+            {% set items = updates|selectattr('phase', 'equalto', ph)|list|reverse|list %}
+            {% if items %}
+            <section class="chapter">
+              <h3 class="chapter__title">{{ heading }}</h3>
+              {% set photos = items|selectattr('kind', 'equalto', 'photo')|list %}
+              {% if photos %}
+              <div class="chapter__plates{% if photos|length == 1 %} chapter__plates--one{% endif %}">
+                {% for u in photos %}
                   {% set src = url_for('static', filename='uploads/' ~ u.image) %}
-                  <button type="button" class="link-btn" style="all:unset;display:block;cursor:zoom-in" data-lightbox="{{ src }}" data-caption="{{ u.title }}" aria-label="Enlarge photo{% if u.title %}: {{ u.title }}{% endif %}">
-                    <img src="{{ src }}" alt="{{ u.title or 'Progress photo' }}" loading="lazy">
-                  </button>
-                {% elif u.kind == 'video' and u.youtube_id %}
-                  <div style="margin-top:8px">{{ youtube(u.youtube_id, 'https://i.ytimg.com/vi/' ~ u.youtube_id ~ '/hqdefault.jpg', u.title or 'Play video') }}</div>
-                {% endif %}
+                  {{ plate(src, src, (u.title or 'Progress photo') ~ ', ' ~ (u.created_at|nice_date), 'plate--wide' if loop.first and photos|length is odd and photos|length > 1 else '') }}
+                {% endfor %}
               </div>
-            </article>
-            {% endfor %}
-          </div>
+              {% endif %}
+              {% for u in items if u.kind != 'photo' %}
+              <article class="note">
+                <p class="note__when">{{ u.created_at|nice_datetime }}</p>
+                {% if u.title %}<h4>{{ u.title }}</h4>{% endif %}
+                {% if u.body %}<p>{{ u.body }}</p>{% endif %}
+                {% if u.kind == 'video' and u.youtube_id %}{{ youtube(u.youtube_id, 'https://i.ytimg.com/vi/' ~ u.youtube_id ~ '/hqdefault.jpg', u.title or 'Play video') }}{% endif %}
+              </article>
+              {% endfor %}
+            </section>
+            {% endif %}
+          {% endfor %}
         {% else %}
-          <div class="empty"><h3>No updates yet</h3><p>Photos and videos are posted here before, during and after the clean.</p></div>
+          <div class="empty"><h3>No photos yet</h3><p>Photos and videos are posted here before, during and after the clean.</p></div>
         {% endif %}
       </div>
 
@@ -94,6 +111,7 @@
           {% if p.is_open_for_funding %}
           <form method="post" action="{{ url_for('public.contribute', slug=p.slug) }}" style="margin-top:22px">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="hp" aria-hidden="true"><label for="hp-website">Leave this empty</label><input id="hp-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
             <span class="label" id="amt-label">Your contribution</span>
             <div class="amounts" role="radiogroup" aria-labelledby="amt-label">
               {% for v in presets %}

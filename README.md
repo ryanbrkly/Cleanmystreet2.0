@@ -92,7 +92,7 @@ It also runs whenever an admin opens the dashboard, as a safety net.
 ## Deploying
 
 ### Vercel (demo only)
-The repo includes `vercel.json` and `api/index.py`, so it deploys to Vercel as-is. Set these environment variables in Vercel → Settings → Environment Variables, then redeploy:
+Vercel picks up `wsgi.py` automatically, so no `vercel.json` is needed. Don't name any folder `public` (Vercel strips it from the app). Set these environment variables in Vercel → Settings → Environment Variables, then redeploy:
 
 | Variable | Value |
 |---|---|

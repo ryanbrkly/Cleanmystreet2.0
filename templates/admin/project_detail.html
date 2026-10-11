@@ -66,7 +66,7 @@
             <summary>Add a YouTube video</summary>
             <form method="post">
               <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_video"><input type="hidden" name="anchor" value="media">
-              <div class="field" style="margin-bottom:10px"><label for="yt">YouTube link</label><input id="yt" type="url" name="youtube_url" placeholder="https://youtu.be/…" required></div>
+              <div class="field" style="margin-bottom:10px"><label for="yt">YouTube link</label><input id="yt" type="text" inputmode="url" name="youtube_url" placeholder="https://youtu.be/…" required></div>
               <div class="form-grid">
                 <div class="field"><label for="phase2">Stage</label><select id="phase2" name="phase"><option value="before">Before</option><option value="during">During</option><option value="after">After</option><option value="general" selected>General</option></select></div>
                 <div class="field"><label for="vt">Title</label><input id="vt" type="text" name="title"></div>

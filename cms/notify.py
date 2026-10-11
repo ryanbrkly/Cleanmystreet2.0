@@ -20,14 +20,14 @@ def send(to, subject, template, **ctx):
     if not cfg.get("SMTP_HOST"):
         current_app.logger.info("EMAIL (not sent, SMTP not configured) to=%s subject=%s\n%s", to, subject, body)
         return False
-    msg = EmailMessage()
-    msg["From"] = cfg["MAIL_FROM"]
-    msg["To"] = to
-    msg["Subject"] = subject
-    if cfg.get("MAIL_REPLY_TO"):
-        msg["Reply-To"] = cfg["MAIL_REPLY_TO"]
-    msg.set_content(body)
     try:
+        msg = EmailMessage()
+        msg["From"] = cfg["MAIL_FROM"]
+        msg["To"] = " ".join(str(to).split())[:200]
+        msg["Subject"] = " ".join(str(subject).split())[:150]  # no CR/LF: blocks header injection
+        if cfg.get("MAIL_REPLY_TO"):
+            msg["Reply-To"] = cfg["MAIL_REPLY_TO"]
+        msg.set_content(body)
         port = int(cfg.get("SMTP_PORT", 587))
         if port == 465:
             server = smtplib.SMTP_SSL(cfg["SMTP_HOST"], port, context=ssl.create_default_context(), timeout=15)

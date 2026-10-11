@@ -9,7 +9,7 @@ from . import notify, payments
 from .db import execute, get_settings, now_iso, query
 from .services import (REQUEST_STATUS_LABELS, get_project_by_slug, mark_contribution_paid,
                        new_return_token, process_expired_projects, project_view, public_stats)
-from .utils import (check_csrf, load_json, make_ref, make_token, parse_rand, rand, save_image,
+from .utils import (check_csrf, clean_text, load_json, make_ref, make_token, parse_rand, rand, save_image,
                     valid_email, youtube_id)
 
 bp = Blueprint("public", __name__)
@@ -133,6 +133,9 @@ def request_clean():
     form = request.form if request.method == "POST" else {}
     errors = {}
     if request.method == "POST":
+        if form.get("website"):  # honeypot field, invisible to people; bots fill it in
+            return redirect(url_for("public.home"))
+        form = _clean_request_form(form)
         errors = _validate_request_form(form)
         photo = None
         if not errors and request.files.get("photo") and request.files["photo"].filename:
@@ -162,6 +165,19 @@ def request_clean():
                            default_days=int(settings.get("default_funding_days") or 21))
 
 
+REQUEST_LIMITS = {"street_name": 120, "suburb": 80, "city": 80, "postcode": 4, "description": 2000,
+                  "requester_name": 80, "email": 160, "phone": 30}
+
+
+def _clean_request_form(form):
+    data = {k: clean_text(form.get(k), n, multiline=(k == "description")) for k, n in REQUEST_LIMITS.items()}
+    data["service_pref"] = form.get("service_pref") if form.get("service_pref") in ("once", "monthly", "unsure") else "once"
+    days = form.get("funding_days", "21")
+    data["funding_days"] = days if days in ("7", "14", "21", "30") else "21"
+    data["consent"] = form.get("consent", "")
+    return data
+
+
 def _validate_request_form(form):
     errors = {}
     for field, label in (("street_name", "Street name"), ("city", "City or town"), ("postcode", "Postcode"),
@@ -186,7 +202,7 @@ def track(token):
     if request.method == "POST":
         if req["status"] != "revision_requested":
             abort(400, "This request can't be edited right now.")
-        form = request.form
+        form = _clean_request_form(request.form)
         errors = _validate_request_form(dict(form, consent="1", requester_name=req["requester_name"],
                                              email=req["email"]))
         photo = req["photo"]
@@ -229,9 +245,11 @@ def contribute(slug):
         flash("This project is no longer accepting contributions.", "error")
         return redirect(url_for("public.project", slug=slug))
     form = request.form
+    if form.get("website"):  # honeypot
+        return redirect(url_for("public.project", slug=slug))
     amount = parse_rand(form.get("amount_custom")) or parse_rand(form.get("amount"))
-    name = form.get("name", "").strip()
-    email = form.get("email", "").strip().lower()
+    name = clean_text(form.get("name"), 80)
+    email = clean_text(form.get("email"), 160).lower()
     problems = []
     if amount < p["min_contribution_cents"]:
         problems.append(f"The minimum contribution for this street is {rand(p['min_contribution_cents'])}.")
@@ -252,7 +270,7 @@ def contribute(slug):
     cid = execute(
         "INSERT INTO contributions(project_id, name, email, anonymous, message, amount_cents, return_token) "
         "VALUES (?,?,?,?,?,?,?)",
-        (p["id"], name[:80], email, 1 if form.get("anonymous") else 0, form.get("message", "").strip()[:280],
+        (p["id"], name, email, 1 if form.get("anonymous") else 0, clean_text(form.get("message"), 280),
          amount, token),
     )
     contribution = query("SELECT * FROM contributions WHERE id=?", (cid,), one=True)

@@ -365,3 +365,73 @@ class UtilTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SecurityTests(Base):
+    def test_headers(self):
+        r = self.client.get("/")
+        for h in ("Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy"):
+            self.assertIn(h, r.headers)
+
+    def test_xss_is_escaped_everywhere(self):
+        evil = '<script>alert(1)</script>'
+        self.submit_request(street_name="Oak " + evil, description=evil)
+        p, token = self.approve()
+        r = self.contribute(p["slug"], "500", token)
+        t = r.headers["Location"].rsplit("/", 1)[1]
+        with self.app.app_context():
+            execute("UPDATE contributions SET name=?, message=?", (evil, evil))
+        self.client.post(f"/pay/demo/{t}", data={"_csrf": token, "outcome": "success"})
+        for path in (f"/projects/{p['slug']}", "/admin/", "/admin/requests?tab=approved", f"/admin/projects/{p['id']}",
+                     "/admin/payments"):
+            html = self.client.get(path).get_data(as_text=True)
+            self.assertNotIn(evil, html, path)
+
+    def test_sponsor_rejects_javascript_links(self):
+        token = self.login()
+        self.client.post("/admin/sponsors", data={"_csrf": token, "action": "create", "name": "X",
+                                                  "url": "javascript:alert(1)"})
+        with self.app.app_context():
+            self.assertEqual(query("SELECT url FROM sponsors", one=True)["url"], "")
+
+    def test_honeypot_and_length_limits(self):
+        self.submit_request(website="spam.example")
+        with self.app.app_context():
+            self.assertEqual(query("SELECT COUNT(*) n FROM requests", one=True)["n"], 0)
+        self.submit_request(street_name="A" * 5000, requester_name="Bob\r\nBcc: x@y.z")
+        with self.app.app_context():
+            r = query("SELECT * FROM requests", one=True)
+        self.assertEqual(len(r["street_name"]), 120)
+        self.assertNotIn("\n", r["requester_name"])
+
+    def test_admin_pages_need_login_and_csrf(self):
+        for path in ("/admin/", "/admin/requests", "/admin/projects/1", "/admin/sponsors", "/admin/settings",
+                     "/admin/payments?format=csv"):
+            self.assertEqual(self.client.get(path).status_code, 302, path)
+        self.login()
+        self.assertEqual(self.client.post("/admin/settings", data={"hero_video_url": ""}).status_code, 400)
+
+    def test_open_redirect_blocked(self):
+        token = self.csrf("/admin/login")
+        r = self.client.post("/admin/login?next=https://evil.example", data={
+            "_csrf": token, "email": "a@x.co.za", "password": "pw-123456"})
+        self.assertTrue(r.headers["Location"].endswith("/admin/"))
+
+    def test_upload_rejects_non_images(self):
+        token = self.csrf()
+        r = self.client.post("/request", data={
+            "_csrf": token, "street_name": "Oak", "city": "Jhb", "postcode": "2193", "description": "x",
+            "requester_name": "R", "email": "r@example.com", "consent": "1",
+            "photo": (io.BytesIO(b"<?php echo 1; ?>"), "shell.php")}, content_type="multipart/form-data")
+        self.assertIn("JPG, PNG", r.get_data(as_text=True))
+        r = self.client.post("/request", data={
+            "_csrf": token, "street_name": "Oak", "city": "Jhb", "postcode": "2193", "description": "x",
+            "requester_name": "R", "email": "r@example.com", "consent": "1",
+            "photo": (io.BytesIO(b"not really a png"), "fake.png")}, content_type="multipart/form-data")
+        self.assertIn("valid image", r.get_data(as_text=True))
+
+    def test_tokens_are_unguessable_and_demo_blocked_outside_demo(self):
+        self.assertEqual(self.client.get("/track/not-a-real-token").status_code, 404)
+        self.assertEqual(self.client.get("/pay/return/nope").status_code, 404)
+        self.app.config["PAYMENT_MODE"] = "yoco"
+        self.assertEqual(self.client.get("/pay/demo/anything").status_code, 404)

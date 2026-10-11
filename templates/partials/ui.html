@@ -46,23 +46,27 @@
 {%- endmacro %}
 
 {% macro project_card(p) -%}
-<a class="pcard" href="{{ url_for('public.project', slug=p.slug) }}">
-  {% if p.cover_image %}
-    <img class="pcard__img" src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="" loading="lazy">
-  {% else %}
-    <img class="pcard__img" src="{{ url_for('static', filename='img/gallery/crew-site-sm.jpg') }}" alt="" loading="lazy">
-  {% endif %}
-  <div class="pcard__body">
-    <div class="pcard__meta"><span>{{ p.location }}</span>{{ status_pill(p) }}</div>
-    <h3>{{ p.title }}</h3>
-    {% if p.service_type == 'monthly' %}<div><span class="pill pill--monthly">Monthly upkeep</span></div>{% endif %}
-    <div class="pcard__nums">
-      <span><b>{{ p.raised_cents|rand }}</b> of {{ p.goal_cents|rand }}</span>
-      <span class="muted">{{ p.backers }} neighbour{{ '' if p.backers == 1 else 's' }}</span>
-    </div>
-    {{ tape(p.pct, thin=True) }}
-  </div>
+{# Album page: photo first, caption-style details underneath #}
+<a class="album" href="{{ url_for('public.project', slug=p.slug) }}">
+  <span class="album__photo">
+    <img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) if p.cover_image else url_for('static', filename='img/gallery/crew-site-sm.jpg') }}" alt="" loading="lazy">
+    {{ status_pill(p) }}
+  </span>
+  <span class="album__where">{{ p.location }}{% if p.service_type == 'monthly' %}, monthly upkeep{% endif %}</span>
+  <span class="album__title">{{ p.title }}</span>
+  {{ tape(p.pct, thin=True) }}
+  <span class="album__nums"><span><b>{{ p.raised_cents|rand }}</b> of {{ p.goal_cents|rand }}</span><span>{{ p.backers }} neighbour{{ '' if p.backers == 1 else 's' }}</span></span>
 </a>
+{%- endmacro %}
+
+{% macro plate(full, small, caption, cls='') -%}
+{# A mounted photo with its caption underneath, as in a printed photo book #}
+<figure class="plate {{ cls }}">
+  <button type="button" data-lightbox="{{ full }}" data-caption="{{ caption }}" aria-label="Enlarge: {{ caption }}">
+    <img src="{{ small }}" alt="{{ caption }}" loading="lazy">
+  </button>
+  <figcaption>{{ caption }}</figcaption>
+</figure>
 {%- endmacro %}
 
 {% macro youtube(video_id, poster, title='Play video') -%}

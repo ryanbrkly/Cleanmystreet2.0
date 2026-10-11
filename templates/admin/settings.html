@@ -9,7 +9,7 @@
   <div>
     <section class="acard">
       <h2>Homepage video</h2>
-      <div class="field" style="margin-bottom:10px"><label for="hv">YouTube link</label><input id="hv" type="url" name="hero_video_url" value="{{ s.hero_video_url }}" placeholder="https://www.youtube.com/watch?v=…"><div class="hint">Paste any YouTube link (watch, youtu.be or Shorts). Leave empty to hide the video section.</div></div>
+      <div class="field" style="margin-bottom:10px"><label for="hv">YouTube link</label><input id="hv" type="text" inputmode="url" name="hero_video_url" value="{{ s.hero_video_url }}" placeholder="https://www.youtube.com/watch?v=…"><div class="hint">Paste any YouTube link (watch, youtu.be or Shorts). Leave empty to hide the video section.</div></div>
       <div class="field" style="margin-bottom:10px"><label for="vh">Heading</label><input id="vh" type="text" name="video_heading" value="{{ s.video_heading }}"></div>
       <div class="field" style="margin-bottom:14px"><label for="vc">Caption</label><input id="vc" type="text" name="video_caption" value="{{ s.video_caption }}"></div>
       {% if video_id %}<p class="small muted">Current video preview:</p>{{ youtube(video_id, 'https://i.ytimg.com/vi/' ~ video_id ~ '/hqdefault.jpg') }}{% endif %}

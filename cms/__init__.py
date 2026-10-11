@@ -10,6 +10,16 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from . import db, utils
 
 
+CSP = ("default-src 'self'; "
+       "img-src 'self' data: https://i.ytimg.com; "
+       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+       "font-src 'self' https://fonts.gstatic.com; "
+       "script-src 'self'; "
+       "frame-src https://www.youtube-nocookie.com; "
+       "form-action 'self' https://*.yoco.com https://yoco.com; "
+       "base-uri 'self'; frame-ancestors 'self'")
+
+
 def create_app(test_config=None):
     load_dotenv()
     app = Flask(__name__, instance_relative_config=True,
@@ -134,7 +144,20 @@ def create_app(test_config=None):
         resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        resp.headers.setdefault("Content-Security-Policy", CSP)
+        if request.is_secure:
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        if request.path.startswith("/admin"):
+            resp.headers.setdefault("Cache-Control", "no-store")
         return resp
+
+    @app.errorhandler(500)
+    def server_error(_e):
+        try:
+            return render_template("pages/error.html", code=500, title="Something went wrong on our side",
+                                   message="Please try again in a minute. If it keeps happening, email us."), 500
+        except Exception:  # noqa: BLE001 - never fail while reporting a failure
+            return "Something went wrong. Please try again in a minute.", 500
 
     @app.errorhandler(404)
     def not_found(_e):

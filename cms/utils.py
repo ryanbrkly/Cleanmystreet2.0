@@ -10,6 +10,8 @@ from urllib.parse import parse_qs, urlparse
 from flask import abort, current_app, request, session
 from PIL import Image, ImageOps
 
+Image.MAX_IMAGE_PIXELS = 40_000_000  # refuse "decompression bomb" images
+
 SAST = timezone(timedelta(hours=2))
 
 # ---------------------------------------------------------------- money
@@ -143,8 +145,8 @@ def save_image(file_storage, max_side=1800, prefix="img"):
     try:
         img = Image.open(file_storage.stream)
         img = ImageOps.exif_transpose(img)
-    except Exception as exc:  # noqa: BLE001 - Pillow raises many types
-        raise ValueError("That file doesn't look like a valid image.") from exc
+    except Exception as exc:  # noqa: BLE001 - Pillow raises many types (incl. DecompressionBombError)
+        raise ValueError("That file doesn't look like a valid image, or it's too large.") from exc
     keep_alpha = img.mode in ("RGBA", "LA", "P") and ext in ("png", "webp", "gif")
     img = img.convert("RGBA" if keep_alpha else "RGB")
     img.thumbnail((max_side, max_side))
@@ -210,6 +212,30 @@ def line_items_text(items):
     return "\n".join(
         f"{i['label']} | {i['cents'] / 100:.0f}" if i.get("cents") else i["label"] for i in items
     )
+
+
+_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def clean_text(value, max_len=200, multiline=False):
+    """Trim, cap length and strip control characters from user input."""
+    text = _CTRL.sub("", str(value or ""))
+    if not multiline:
+        text = " ".join(text.split())
+    return text.strip()[:max_len]
+
+
+def safe_url(url):
+    """Allow only http(s) links; anything else (javascript:, data:) becomes empty."""
+    url = (url or "").strip()
+    if not url:
+        return ""
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d)", url) and not url.lower().startswith(("http://", "https://")):
+        return ""  # javascript:, data:, mailto: etc.
+    if not url.lower().startswith(("http://", "https://")):
+        url = "https://" + url
+    parsed = urlparse(url)
+    return url[:300] if parsed.scheme in ("http", "https") and parsed.netloc and " " not in url else ""
 
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")

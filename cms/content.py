@@ -63,7 +63,7 @@ PAGES = {
             ]),
             ("Photo story", [
                 ("about.story_heading", "Heading", T, "How a street gets done"),
-                ("about.story_intro", "Introduction", T, "From cones going up to the final sweep. Tap any photo to see it full size."),
+                ("about.story_intro", "Introduction", T, "From cones going up to the final sweep."),
                 ("about.home_button", "Button on the homepage that links to the photo story", T, "See how a street gets done"),
             ]),
             ("Why a clean community matters", [

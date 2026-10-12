@@ -72,6 +72,53 @@
     else if (e.key === "ArrowLeft") step(-1);
   });
 
+  // Photo story timeline: drag with the mouse, swipe on touch, arrow buttons; a drag never opens a photo
+  document.querySelectorAll("[data-storyline]").forEach(function (box) {
+    var track = box.querySelector(".storyline__track");
+    var navs = box.querySelectorAll(".storyline__nav");
+    if (!track) return;
+    var down = false, startX = 0, startLeft = 0, moved = 0;
+    track.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "mouse" || e.button !== 0) return; // touch scrolls natively
+      down = true; moved = 0; startX = e.clientX; startLeft = track.scrollLeft;
+    });
+    window.addEventListener("pointermove", function (e) {
+      if (!down) return;
+      var dx = e.clientX - startX;
+      if (Math.abs(dx) > 4 && !track.classList.contains("is-dragging")) track.classList.add("is-dragging");
+      moved = Math.max(moved, Math.abs(dx));
+      track.scrollLeft = startLeft - dx;
+    });
+    window.addEventListener("pointerup", function () {
+      if (!down) return;
+      down = false;
+      track.classList.remove("is-dragging");
+    });
+    // swallow the click that ends a drag so the lightbox doesn't open
+    track.addEventListener("click", function (e) {
+      if (moved > 6) { e.preventDefault(); e.stopPropagation(); moved = 0; }
+    }, true);
+    function stepWidth() {
+      var item = track.querySelector(".storyline__step");
+      return item ? item.getBoundingClientRect().width : track.clientWidth * 0.8;
+    }
+    function update() {
+      var max = track.scrollWidth - track.clientWidth - 2;
+      navs.forEach(function (b) {
+        b.disabled = parseInt(b.getAttribute("data-dir"), 10) < 0 ? track.scrollLeft <= 2 : track.scrollLeft >= max;
+      });
+    }
+    navs.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        track.scrollBy({ left: parseInt(b.getAttribute("data-dir"), 10) * stepWidth(), behavior: smooth ? "smooth" : "auto" });
+      });
+    });
+    track.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+  });
+
   // Project feed filter (before / during / after)
   var filter = document.querySelector(".feed-filter");
   if (filter) {

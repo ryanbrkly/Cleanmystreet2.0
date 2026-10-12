@@ -817,3 +817,35 @@ textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, mo
 .layout-list__tools .pos { width: 60px; padding: 6px 8px; margin-left: 4px; }
 .layout-list__sub { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-top: 6px; border-top: 1px dashed var(--line); }
 @media (max-width: 760px) { .layout-list li { grid-template-columns: 26px minmax(0, 1fr); } .layout-list__tools { grid-column: 2; justify-content: flex-start; } }
+
+/* ------------------------------------------------------------ about: photo story timeline */
+.storyline { --edge: max(var(--gutter), calc((100vw - var(--wrap)) / 2 + var(--gutter))); position: relative; }
+.storyline__track { list-style: none; margin: 0; display: flex; gap: 0; overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity; scroll-padding-inline: var(--edge); padding: 8px var(--edge) 20px;
+  scrollbar-width: thin; scrollbar-color: var(--silver) transparent; cursor: grab; outline: none; }
+.storyline__track:focus-visible { box-shadow: inset 0 0 0 3px var(--sky); }
+.storyline__track.is-dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
+.storyline__track.is-dragging .plate > button { cursor: grabbing; }
+.storyline__step { flex: 0 0 clamp(250px, 30vw, 360px); scroll-snap-align: start; position: relative; padding-right: 28px; }
+/* the line the dots sit on */
+.storyline__step::before, .storyline__end::before { content: ""; position: absolute; left: 0; right: 0; top: 17px; height: 3px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 18px, transparent 18px 26px); }
+.storyline__step:first-child::before { left: 18px; }
+.storyline__dot { position: relative; z-index: 1; display: inline-grid; place-items: center; min-width: 38px; height: 38px; padding: 0 8px;
+  border-radius: 999px; background: var(--hivis); color: var(--ink); font-weight: 800; font-size: .9rem;
+  border: 3px solid var(--ink); margin-bottom: 16px; font-variant-numeric: tabular-nums; }
+.storyline__dot--end { background: var(--ink); color: var(--hivis); }
+.storyline__end { flex: 0 0 60px; position: relative; }
+.storyline__end::before { right: auto; width: 20px; }
+.storyline__step .plate img { aspect-ratio: 4 / 3; border-radius: 4px; pointer-events: none; }
+.storyline__step .plate > button { cursor: zoom-in; }
+.storyline__step .plate figcaption { font-size: .98rem; padding-right: 4px; }
+.storyline__controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; }
+.storyline__hint { margin: 0; color: var(--muted); font-size: .9rem; }
+.storyline__buttons { display: flex; gap: 8px; }
+.storyline__nav { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ink); background: #fff; color: var(--ink);
+  font-size: 1.2rem; font-weight: 800; cursor: pointer; display: grid; place-items: center; }
+.storyline__nav:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.storyline__nav:disabled { opacity: .3; cursor: default; }
+@media (max-width: 560px) { .storyline__step { flex-basis: 78vw; padding-right: 18px; } .storyline__buttons { display: none; } }
+@media (prefers-reduced-motion: reduce) { .storyline__track { scroll-behavior: auto; } }

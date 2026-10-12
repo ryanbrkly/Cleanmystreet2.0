@@ -56,18 +56,29 @@
       {% if c('about.story_intro') %}<p>{{ c('about.story_intro') }}</p>{% endif %}
     </div>
     {% endif %}
-    <ol class="story__list" data-gallery>
+  </div>
+  <div class="storyline" data-storyline>
+    <ol class="storyline__track" data-gallery tabindex="0" aria-label="Photo story, scroll sideways">
       {% for s in story %}
-      <li class="story__step">
+      <li class="storyline__step">
+        <span class="storyline__dot" aria-hidden="true">{{ '%02d' % loop.index }}</span>
         <figure class="plate">
-          <button type="button" data-lightbox="{{ s.image|photo_url }}" data-caption="{{ loop.index }}. {{ s.caption }}" aria-label="Enlarge photo {{ loop.index }}{% if s.caption %}: {{ s.caption }}{% endif %}">
-            <img src="{{ s.image|photo_url(True) }}" alt="{{ s.caption or ('Step ' ~ loop.index) }}" loading="lazy">
+          <button type="button" data-lightbox="{{ s.image|photo_url }}" data-caption="{{ loop.index }}. {{ s.caption }}" aria-label="Open photo {{ loop.index }}{% if s.caption %}: {{ s.caption }}{% endif %}">
+            <img src="{{ s.image|photo_url(True) }}" alt="{{ s.caption or ('Step ' ~ loop.index) }}" loading="lazy" draggable="false">
           </button>
-          <figcaption><span class="story__num">{{ '%02d' % loop.index }}</span>{{ s.caption }}</figcaption>
+          {% if s.caption %}<figcaption>{{ s.caption }}</figcaption>{% endif %}
         </figure>
       </li>
       {% endfor %}
+      <li class="storyline__end" aria-hidden="true"><span class="storyline__dot storyline__dot--end">✓</span></li>
     </ol>
+    <div class="wrap storyline__controls">
+      <p class="storyline__hint">Drag or swipe to follow the story. Tap a photo to open it.</p>
+      <div class="storyline__buttons">
+        <button type="button" class="storyline__nav" data-dir="-1" aria-label="Previous photos">←</button>
+        <button type="button" class="storyline__nav" data-dir="1" aria-label="Next photos">→</button>
+      </div>
+    </div>
   </div>
 </section>
 {% endif %}

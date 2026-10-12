@@ -21,7 +21,7 @@
     </div>
     <div class="hero2__media">
       <img src="{{ url_for('static', filename='img/gallery/aerial-crew.jpg') }}" alt="A Clean My Street crew trimming verges and sweeping a pavement, seen from above" fetchpriority="high">
-      {% if featured %}{% set f = featured[0] %}
+      {% if featured and featured[0].status == 'funding' %}{% set f = featured[0] %}
       <a class="hero2__live" href="{{ url_for('public.project', slug=f.slug) }}">
         <span class="hero2__live-label">Raising funds now</span>
         <span class="album__title">{{ f.title }}</span>
@@ -87,11 +87,11 @@
 <section class="section section--paving">
   <div class="wrap">
     <div class="section-head">
-      <h2>Streets raising funds now</h2>
+      <h2>{% if featured|selectattr('status', 'ne', 'funding')|list %}Our streets{% else %}Streets raising funds now{% endif %}</h2>
       <a class="btn btn--ghost btn--sm" href="{{ url_for('public.projects') }}">See all projects</a>
     </div>
     {% if featured %}
-    <div class="albums">{% for p in featured %}{{ project_card(p) }}{% endfor %}</div>
+    <div class="albums albums--home">{% for p in featured %}{{ project_card(p) }}{% endfor %}</div>
     {% else %}
     <div class="empty">
       <h3>No streets are raising funds right now</h3>

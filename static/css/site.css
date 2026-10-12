@@ -1094,3 +1094,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--royal); box-shad
 .nav .btn--primary.btn--sm { font-size: .9rem; padding: 10px 18px; }
 @media (min-width: 901px) and (max-width: 1100px) { .nav a:not(.btn) { font-size: .78rem; padding: 7px 8px; } }
 @media (max-width: 900px) { .nav a:not(.btn) { font-size: .9rem; padding: 12px 8px; } }
+
+/* Everything 10% smaller (the menu keeps its own size) */
+html { font-size: 90%; }
+body { font-size: 15.3px; }
+:root { --wrap: 1100px; }
+.section { padding: clamp(56px, 8vw, 108px) 0; }
+.btn { padding: 13px 23px; }
+.btn--sm { padding: 9px 16px; }
+.hero2__media > img { border-radius: 25px; }
+.nav a:not(.btn) { font-size: .889rem; }
+.nav .btn--primary.btn--sm { font-size: 1rem; padding: 10px 18px; }
+@media (min-width: 901px) and (max-width: 1100px) { .nav a:not(.btn) { font-size: .867rem; } }
+@media (max-width: 900px) { .nav a:not(.btn) { font-size: 1rem; } }
+
+/* Homepage: room for six streets, three to a row */
+.albums--home { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 24px; }
+.albums--home .album__photo { aspect-ratio: 4 / 3.4; }
+@media (max-width: 900px) { .albums--home { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .albums--home { grid-template-columns: 1fr; } }
+.album__photo .pill--completed { background: var(--ink); color: #fff; }

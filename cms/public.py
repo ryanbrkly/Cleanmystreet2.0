@@ -72,9 +72,11 @@ def home():
     settings = get_settings()
     featured = [project_view(r) for r in query(
         "SELECT * FROM projects WHERE status IN ('funding','funded','scheduled','in_progress') "
-        "ORDER BY CASE status WHEN 'funding' THEN 0 ELSE 1 END, deadline LIMIT 3")]
+        "ORDER BY CASE status WHEN 'funding' THEN 0 ELSE 1 END, deadline LIMIT 6")]
     completed = [project_view(r) for r in query(
-        "SELECT * FROM projects WHERE status='completed' ORDER BY completed_at DESC LIMIT 3")]
+        "SELECT * FROM projects WHERE status='completed' ORDER BY completed_at DESC LIMIT 6")]
+    # the homepage shows up to six streets: live ones first, then recent finished ones
+    featured = featured + completed[:max(0, 6 - len(featured))]
     sponsors = query("SELECT * FROM sponsors WHERE active=1 AND show_on_home=1 ORDER BY sort_order, id")
     return render_template(
         "pages/home.html",

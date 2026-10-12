@@ -200,3 +200,19 @@ class BenefitsTests(Base):
         self.assertNotIn("javascript:", page)
         self.assertIn("Seeff Property Group", page)  # source name kept, link dropped
         self.assertNotIn("Why a clean street pays off", self.client.get("/").get_data(as_text=True))
+
+
+class HomeStreetsTests(Base):
+    def test_homepage_shows_up_to_six_streets(self):
+        from cms.db import execute
+        with self.app.app_context():
+            for i in range(8):
+                status = "funding" if i < 4 else "completed"
+                execute("INSERT INTO projects(slug, title, street_name, city, goal_cents, deadline, status, completed_at) "
+                        "VALUES (?,?,?,?,?,?,?,?)", (f"street-{i}", f"Street {i}", f"Street {i}", "Joburg", 100000,
+                                                   "2099-01-01", status, f"2026-10-0{i + 1}" if status == "completed" else None))
+        html = self.client.get("/").get_data(as_text=True)
+        cards = html.split("albums--home")[1].split("</section>")[0].count('class="album"')
+        self.assertEqual(cards, 6)
+        self.assertIn("Our streets", html)
+        self.assertIn("Raising funds now", html)  # hero card still shows a live street

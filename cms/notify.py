@@ -19,6 +19,38 @@ from .db import get_settings
 from .utils import valid_email
 
 
+def _tls_context():
+    ctx = ssl.create_default_context()
+    if not current_app.config.get("SMTP_TLS_VERIFY", True):
+        # Still encrypted, but the server's certificate isn't checked. Only for mail hosts with a
+        # broken certificate, and only until the host fixes it.
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
+def explain(exc):
+    """Turn a mail-server error into a sentence an admin can act on."""
+    text = str(exc)
+    if isinstance(exc, ssl.SSLCertVerificationError) or "CERTIFICATE_VERIFY_FAILED" in text:
+        if "expired" in text:
+            why = "the mail server’s security certificate has expired"
+        elif "hostname" in text or "match" in text:
+            why = "the mail server’s certificate doesn’t match SMTP_HOST"
+        else:
+            why = "the mail server’s security certificate couldn’t be verified"
+        return (f"Not sent: {why}. Ask your email host to renew it, or set SMTP_HOST to the server name on their "
+                f"certificate (often your hosting server’s own name). Short-term workaround: set "
+                f"SMTP_TLS_VERIFY=false in Vercel and redeploy.")
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return "Not sent: the mail server rejected SMTP_USER / SMTP_PASSWORD. Check them in Vercel."
+    if isinstance(exc, smtplib.SMTPSenderRefused):
+        return "Not sent: the mail server won’t send from MAIL_FROM. Use an address on the account in SMTP_USER."
+    if isinstance(exc, (TimeoutError, ConnectionError, OSError)) and not isinstance(exc, smtplib.SMTPException):
+        return f"Not sent: couldn’t reach {current_app.config.get('SMTP_HOST')} on port {current_app.config.get('SMTP_PORT')}. ({text})"
+    return f"Not sent: {text}"
+
+
 @contextmanager
 def _smtp():
     cfg = current_app.config
@@ -27,10 +59,10 @@ def _smtp():
         return
     port = int(cfg.get("SMTP_PORT", 587))
     if port == 465:
-        server = smtplib.SMTP_SSL(cfg["SMTP_HOST"], port, context=ssl.create_default_context(), timeout=15)
+        server = smtplib.SMTP_SSL(cfg["SMTP_HOST"], port, context=_tls_context(), timeout=15)
     else:
         server = smtplib.SMTP(cfg["SMTP_HOST"], port, timeout=15)
-        server.starttls(context=ssl.create_default_context())
+        server.starttls(context=_tls_context())
     try:
         if cfg.get("SMTP_USER"):
             server.login(cfg["SMTP_USER"], cfg["SMTP_PASSWORD"])
@@ -97,28 +129,44 @@ def send_many(key, recipients, ref_type="", ref_id=None, force=False):
                     sent += 1
                 except Exception as exc:  # noqa: BLE001
                     current_app.logger.exception("Failed to send email to %s", to)
-                    emails.log(to, key, subject, "failed", str(exc), ref_type, ref_id)
+                    emails.log(to, key, subject, "failed", explain(exc), ref_type, ref_id)
     except Exception as exc:  # noqa: BLE001 - could not connect / log in
         current_app.logger.exception("SMTP connection failed")
         for to, subject, _h, _t in rendered[sent:]:
-            emails.log(to, key, subject, "failed", f"Mail server: {exc}", ref_type, ref_id)
+            emails.log(to, key, subject, "failed", explain(exc), ref_type, ref_id)
     return sent
 
 
+def check_connection():
+    """Connect and sign in to the mail server without sending. Returns (ok, message)."""
+    cfg = current_app.config
+    if not cfg.get("SMTP_HOST"):
+        return False, "Email isn’t set up yet: add SMTP_HOST and the other SMTP settings in Vercel, then redeploy."
+    try:
+        with _smtp():
+            pass
+    except Exception as exc:  # noqa: BLE001
+        return False, explain(exc)
+    note = "" if cfg.get("SMTP_TLS_VERIFY", True) else " (certificate checking is turned off)"
+    return True, f"Connected to {cfg['SMTP_HOST']} and signed in{note}. Emails can be sent."
+
+
 def deliver_now(to, key, subject, html, text):
-    """Send an already-rendered message (used for admin test emails). Returns True if sent."""
+    """Send an already-rendered message (used for admin test emails). Returns (sent, message)."""
     try:
         with _smtp() as server:
             if server is None:
                 emails.log(to, key, subject, "logged", "SMTP not configured", "test", None)
-                return False
+                return False, ("Not sent: email isn’t set up on the server yet. Add the SMTP settings in Vercel "
+                               "and redeploy.")
             _deliver(server, to, subject, html, text)
         emails.log(to, key, subject, "sent", "", "test", None)
-        return True
+        return True, ""
     except Exception as exc:  # noqa: BLE001
         current_app.logger.exception("Test email failed")
-        emails.log(to, key, subject, "failed", str(exc), "test", None)
-        return False
+        msg = explain(exc)
+        emails.log(to, key, subject, "failed", msg, "test", None)
+        return False, msg
 
 
 def send(to, key, ref_type="", ref_id=None, force=False, **ctx):

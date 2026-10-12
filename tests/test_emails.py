@@ -278,3 +278,54 @@ class SweepTests(Base):
         self.assertEqual(self.client.get("/tasks/process-expired").status_code, 404)
         self.assertEqual(self.client.get("/tasks/process-expired", headers={"Authorization": "Bearer nope"}).status_code, 404)
         self.assertEqual(self.client.get("/tasks/process-expired", headers={"Authorization": "Bearer cron123"}).status_code, 200)
+
+
+class MailServerProblemTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.app.config.update(SMTP_HOST="mail.example.test", SMTP_PORT="587")
+
+    def test_expired_certificate_gives_clear_advice(self):
+        import ssl
+
+        class Expired(FakeSMTP):
+            def starttls(self, context=None, **k):
+                FakeSMTP.contexts.append(context)
+                if context.verify_mode != ssl.CERT_NONE:
+                    raise ssl.SSLCertVerificationError(
+                        1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1010)")
+        FakeSMTP.contexts, FakeSMTP.outbox = [], []
+        token = self.login()
+        with mock.patch("smtplib.SMTP", Expired):
+            r = self.client.post("/admin/emails/project_completed", data={"_csrf": token, "action": "test",
+                                                                          "subject": "Hi", "html": "<p>x</p>"})
+            page = r.get_data(as_text=True)
+            self.assertIn("certificate has expired", page)
+            self.assertIn("SMTP_TLS_VERIFY=false", page)
+            r = self.client.post("/admin/emails", data={"_csrf": token, "action": "check_smtp"}, follow_redirects=True)
+            self.assertIn("certificate has expired", r.get_data(as_text=True))
+            # a real send logs the same advice and never breaks the request
+            self.assertEqual(self.submit_request().status_code, 302)
+            with self.app.app_context():
+                row = query("SELECT * FROM email_log WHERE template='request_received'", one=True)
+            self.assertEqual(row["status"], "failed")
+            self.assertIn("certificate has expired", row["error"])
+            # workaround switch: still encrypted, certificate not checked
+            self.app.config["SMTP_TLS_VERIFY"] = False
+            r = self.client.post("/admin/emails", data={"_csrf": token, "action": "check_smtp"}, follow_redirects=True)
+            self.assertIn("Connected to mail.example.test", r.get_data(as_text=True))
+            self.assertIn("Certificate checking is off", r.get_data(as_text=True))
+            self.submit_request()
+            self.assertEqual(FakeSMTP.outbox[-1]["To"], "ryan@example.com")
+
+    def test_wrong_password_message(self):
+        import smtplib
+
+        class BadLogin(FakeSMTP):
+            def login(self, *a):
+                raise smtplib.SMTPAuthenticationError(535, b"bad")
+        self.app.config.update(SMTP_USER="x", SMTP_PASSWORD="y")
+        token = self.login()
+        with mock.patch("smtplib.SMTP", BadLogin):
+            r = self.client.post("/admin/emails", data={"_csrf": token, "action": "check_smtp"}, follow_redirects=True)
+        self.assertIn("rejected SMTP_USER / SMTP_PASSWORD", r.get_data(as_text=True))

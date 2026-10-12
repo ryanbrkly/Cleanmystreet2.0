@@ -61,6 +61,8 @@ def create_app(test_config=None):
         SMTP_PORT=os.environ.get("SMTP_PORT", "587"),
         SMTP_USER=os.environ.get("SMTP_USER", ""),
         SMTP_PASSWORD=os.environ.get("SMTP_PASSWORD", ""),
+        # Set to "false" only if your mail host's certificate is expired or doesn't match its name.
+        SMTP_TLS_VERIFY=os.environ.get("SMTP_TLS_VERIFY", "true").strip().lower() not in ("false", "0", "no", "off"),
         MAIL_FROM=os.environ.get("MAIL_FROM", "Clean My Street <info@cleanmystreet.co.za>"),
         MAIL_REPLY_TO=os.environ.get("MAIL_REPLY_TO", ""),
         SITE_URL=os.environ.get("SITE_URL", "").rstrip("/"),

@@ -668,6 +668,10 @@ def payments_ledger():
 def emails_list():
     if request.method == "POST":
         action = request.form.get("action")
+        if action == "check_smtp":
+            ok, msg = notify.check_connection()
+            flash(msg, "success" if ok else "error")
+            return redirect(url_for("admin.emails_list"))
         if action == "alerts":
             raw = request.form.get("admin_notify_email", "")
             addrs = [a.strip() for a in raw.replace(";", ",").split(",") if a.strip()]
@@ -709,6 +713,9 @@ def emails_list():
     return render_template("admin/emails.html", templates=rows, groups=emails.GROUPS,
                            layout_custom=emails.source("layout")[3], log=log, counts=counts, status=status,
                            smtp=bool(current_app.config.get("SMTP_HOST")),
+                           smtp_host=current_app.config.get("SMTP_HOST", ""),
+                           smtp_port=current_app.config.get("SMTP_PORT", ""),
+                           tls_verify=current_app.config.get("SMTP_TLS_VERIFY", True),
                            alerts=get_settings().get("admin_notify_email") or "",
                            env_alerts=current_app.config.get("ADMIN_NOTIFY_EMAIL", ""))
 
@@ -755,12 +762,11 @@ def email_edit(key):
                 parts = emails.render_parts(d["subject"], d["html"], new_html, ctx)
             else:
                 parts = emails.render_parts(new_subject, new_html, emails.source("layout")[1], ctx)
-            ok = notify.deliver_now(g.admin_email, key, "[Test] " + parts[0], parts[1], parts[2])
+            ok, problem = notify.deliver_now(g.admin_email, key, "[Test] " + parts[0], parts[1], parts[2])
             if ok:
                 flash(f"Test email sent to {g.admin_email} using sample details. It hasn’t been saved yet.", "success")
             else:
-                flash("Test not sent: email isn’t set up on the server yet (SMTP settings), or the mail server "
-                      "refused it. Check the log at the bottom of Admin → Emails.", "error")
+                flash(problem, "error")
             return render_template("admin/email_edit.html", key=key, meta=meta, subject=new_subject, html=new_html,
                                    enabled=enabled, custom=custom)
         if emails.override(key):

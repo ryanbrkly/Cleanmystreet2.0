@@ -64,7 +64,7 @@ Each email has an editable subject and HTML body, plus a shared header/footer la
 
 Every attempt is recorded in the email log (Admin → Emails, and on each request and project page) as Sent, Not sent (SMTP not configured), Failed or Turned off.
 
-Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` to deliver mail. Optionally set `SITE_URL` (e.g. `https://cleanmystreet.co.za`) for links in emails sent from the command line.
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` to deliver mail. Use **Check connection** in Admin → Emails to test the settings. If it reports an expired or mismatched certificate, ask your email host to renew it or use the server name on their certificate as `SMTP_HOST`; as a short-term workaround `SMTP_TLS_VERIFY=false` keeps the connection encrypted but stops checking the certificate. Optionally set `SITE_URL` (e.g. `https://cleanmystreet.co.za`) for links in emails sent from the command line.
 
 ## Payments (Yoco)
 

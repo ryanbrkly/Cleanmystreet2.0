@@ -36,6 +36,15 @@
   </div>
   <div>
     <section class="acard">
+      <h2>Mail server</h2>
+      {% if smtp %}
+      <p class="small" style="margin-top:-6px">{{ smtp_host }} · port {{ smtp_port }}</p>
+      {% if not tls_verify %}<p class="small" style="color:var(--danger)">Certificate checking is off (SMTP_TLS_VERIFY=false). Turn it back on once your email host renews its certificate.</p>{% endif %}
+      {% else %}<p class="small muted" style="margin-top:-6px">Not set up yet.</p>{% endif %}
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="check_smtp">
+        <button class="btn btn--ghost btn--sm" type="submit">Check connection</button></form>
+    </section>
+    <section class="acard">
       <h2>Team alerts</h2>
       <form method="post">
         <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="alerts">

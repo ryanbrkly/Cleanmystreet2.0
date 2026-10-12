@@ -781,3 +781,12 @@ textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, mo
 .cover-choices button { all: unset; cursor: pointer; display: block; border-radius: 6px; overflow: hidden; outline-offset: 2px; }
 .cover-choices button:hover, .cover-choices button:focus-visible { outline: 3px solid var(--sky); }
 .cover-choices img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+/* admin: page content */
+.content-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+.content-fields .field.full { grid-column: 1 / -1; }
+@media (max-width: 760px) { .content-fields { grid-template-columns: 1fr; } }
+.content-actions { display: flex; gap: 14px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.content-image { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.content-image img { width: 160px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; background: var(--paving); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--sky); margin-left: 4px; vertical-align: middle; }
+.lede--paras p { margin: 0 0 .6em; } .lede--paras p:last-child { margin-bottom: 0; } .lede--paras { margin-bottom: 20px; }

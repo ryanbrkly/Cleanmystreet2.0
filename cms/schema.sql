@@ -202,3 +202,11 @@ CREATE TABLE IF NOT EXISTS story_photos (
     sort_order  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 )
+;
+
+-- Wording and pictures on the About and Sponsors pages edited in admin (defaults in cms/content.py).
+CREATE TABLE IF NOT EXISTS page_content (
+    key         TEXT PRIMARY KEY,
+    value       TEXT NOT NULL DEFAULT '',
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+)

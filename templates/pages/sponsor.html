@@ -26,7 +26,7 @@
     {% if s.offer %}
     <div class="offer-band">
       <span class="offer-band__tag">Thank-you offer</span>
-      <p><b>{{ s.offer }}</b><br><span class="small">Mention Clean My Street when you visit {{ s.name }}.</span></p>
+      <p><b>{{ s.offer }}</b><br><span class="small">{{ c('sponsor.offer_note', name=s.name) }}</span></p>
     </div>
     {% endif %}
   </div>
@@ -44,14 +44,10 @@
 <section class="section section--paving">
   <div class="wrap two-col">
     <div>
-      <h2>Say thanks to {{ s.name }}</h2>
-      <p class="lede">Businesses keep sponsoring when they can see it matters to the people who live nearby.</p>
-      <ul class="ticks">
-        <li>{{ icon('check', 18) }} Choose them next time you need what they offer</li>
-        <li>{{ icon('check', 18) }} Tell them you saw them on Clean My Street</li>
-        <li>{{ icon('check', 18) }} Leave them a quick online review</li>
-        <li>{{ icon('check', 18) }} Share this page in your street or estate group</li>
-      </ul>
+      {% if c('sponsor.thanks_heading') %}<h2>{{ c('sponsor.thanks_heading', name=s.name) }}</h2>{% endif %}
+      <div class="lede lede--paras">{{ c('sponsor.thanks_lede', name=s.name)|paragraphs }}</div>
+      {% set items = c('sponsor.thanks_list', name=s.name)|lines %}
+      {% if items %}<ul class="ticks">{% for item in items %}<li>{{ icon('check', 18) }} {{ item }}</li>{% endfor %}</ul>{% endif %}
       {% set share_url = url_for('public.sponsor_page', slug=s.slug, _external=True) %}
       <div class="actions-row">
         <a class="btn btn--ghost btn--sm" href="https://wa.me/?text={{ (s.name ~ ' helps keep our streets clean. Support them: ' ~ share_url)|urlencode }}" target="_blank" rel="noopener">{{ icon('whatsapp', 16) }} Share on WhatsApp</a>

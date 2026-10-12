@@ -961,3 +961,60 @@ def story():
         flash("Story saved.", "success")
         return redirect(url_for("admin.story") + "#photos")
     return render_template("admin/story.html", rows=_story_rows())
+
+
+# ---------------------------------------------------------------- page content (About, Sponsors)
+
+
+@bp.route("/content/<page>", methods=["GET", "POST"])
+@login_required
+def page_content(page):
+    from . import content
+    if page not in content.PAGES:
+        abort(404)
+    spec = content.PAGES[page]
+    if request.method == "POST":
+        f = request.form
+        reset = f.get("reset_section")
+        changed = 0
+        for idx, (title, fields) in enumerate(spec["sections"]):
+            for key, _label, kind, default in fields:
+                if reset is not None and reset == str(idx):
+                    old = content.get(key)
+                    content.save(key, default)
+                    if kind == content.IMG:
+                        _drop_content_image(old, default)
+                    continue
+                if reset is not None:
+                    continue
+                if kind == content.IMG:
+                    fs = request.files.get(key)
+                    if f.get(f"{key}__default"):
+                        old = content.get(key)
+                        content.save(key, default)
+                        _drop_content_image(old, default)
+                    elif fs and fs.filename:
+                        try:
+                            name = save_image(fs, prefix="page")
+                        except ValueError as exc:
+                            flash(f"{title}: {exc}", "error")
+                            continue
+                        old = content.get(key)
+                        content.save(key, name)
+                        _drop_content_image(old, name)
+                        changed += 1
+                    continue
+                if key in f:
+                    before = content.get(key)
+                    content.save(key, f.get(key, ""))
+                    changed += int(content.get(key) != before)
+        log_activity("page_content_saved", page)
+        flash("Section reset to the original wording." if reset is not None else "Page saved.", "success")
+        return redirect(url_for("admin.page_content", page=page) + (f"#s{reset}" if reset is not None else ""))
+    return render_template("admin/page_content.html", page=page, spec=spec, pages=content.PAGES,
+                           values=content.all_values(), custom=content.customised())
+
+
+def _drop_content_image(old, new=None):
+    if old and old != new and not str(old).startswith("static:"):
+        delete_upload(old)

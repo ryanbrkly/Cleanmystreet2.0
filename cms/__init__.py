@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import db, utils
+from . import content, db, utils
 
 
 CSP = ("default-src 'self'; "
@@ -142,7 +142,10 @@ def create_app(test_config=None):
         nice_datetime=utils.nice_datetime,
         initials=utils.initials,
         photo_url=utils.photo_url,
+        paragraphs=content.paragraphs,
+        lines=content.lines,
     )
+    app.jinja_env.globals.update(c=content.get)
 
     @app.context_processor
     def inject_globals():

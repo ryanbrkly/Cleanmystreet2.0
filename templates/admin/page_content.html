@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% set title = spec.label %}
+{% block main %}
+<div class="admin-top">
+  <div><h1>Page content</h1><p class="muted" style="margin:4px 0 0">Change any wording or picture on these pages. Leave a heading or title empty to hide it.</p></div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for(spec.endpoint) }}" target="_blank">View {{ spec.label|lower }}</a>
+</div>
+<nav class="tabs" aria-label="Pages" style="margin-bottom:18px">
+  {% for key, pg in pages.items() %}<a href="{{ url_for('admin.page_content', page=key) }}"{% if key == page %} aria-current="page"{% endif %}>{{ pg.label }}</a>{% endfor %}
+  <a href="{{ url_for('admin.story') }}">About photo story</a>
+</nav>
+<form method="post" enctype="multipart/form-data" class="content-form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% for title, fields in spec.sections %}
+  {% set sidx = loop.index0 %}
+  <section class="acard" id="s{{ sidx }}">
+    <h2>{{ title }}{% if fields|map('first')|select('in', custom)|list %} <span class="tiny muted">Changed</span>{% endif %}</h2>
+    <div class="content-fields">
+    {% for key, label, kind, default in fields %}
+      {% set v = values[key] %}
+      <div class="field{% if kind in ('area', 'lines') %} full{% endif %}">
+        <label for="f-{{ key }}">{{ label }}{% if key in custom %} <span class="dot" title="Changed from the original"></span>{% endif %}</label>
+        {% if kind == 'text' %}
+          <input id="f-{{ key }}" type="text" name="{{ key }}" value="{{ v }}" maxlength="200">
+        {% elif kind == 'image' %}
+          <div class="content-image">
+            <img src="{{ v|photo_url(True) }}" alt="">
+            <div>
+              <input id="f-{{ key }}" type="file" name="{{ key }}" accept="image/*">
+              {% if key in custom %}<label class="check small" style="margin-top:8px"><input type="checkbox" name="{{ key }}__default" value="1"> <span>Go back to the original picture</span></label>{% endif %}
+            </div>
+          </div>
+        {% else %}
+          <textarea id="f-{{ key }}" name="{{ key }}" rows="{{ 6 if (v|length) > 300 else (4 if kind == 'lines' else 3) }}">{{ v }}</textarea>
+        {% endif %}
+      </div>
+    {% endfor %}
+    </div>
+    <div class="content-actions">
+      <button class="btn btn--primary btn--sm" type="submit">Save page</button>
+      {% if fields|map('first')|select('in', custom)|list %}<button class="link-btn small" type="submit" name="reset_section" value="{{ sidx }}" formnovalidate>Reset this section to the original</button>{% endif %}
+    </div>
+  </section>
+  {% endfor %}
+  <div class="story-save"><button class="btn btn--primary" type="submit">Save page</button><span class="tiny muted">Saves every section on this page.</span></div>
+</form>
+{% endblock %}

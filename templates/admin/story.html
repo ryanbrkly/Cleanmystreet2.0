@@ -6,6 +6,11 @@
   <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story" target="_blank">View on the website</a>
 </div>
 
+<nav class="tabs" aria-label="Pages" style="margin-bottom:18px">
+  <a href="{{ url_for('admin.page_content', page='about') }}">About page</a>
+  <a href="{{ url_for('admin.page_content', page='sponsors') }}">Sponsors page</a>
+  <a href="{{ url_for('admin.story') }}" aria-current="page">About photo story</a>
+</nav>
 <section class="acard">
   <h2>Add photos</h2>
   <form method="post" enctype="multipart/form-data" class="story-upload">

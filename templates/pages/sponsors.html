@@ -1,29 +1,30 @@
 {% extends "base.html" %}
 {% from "partials/ui.html" import icon %}
 {% set title = 'Local sponsors' %}
-{% set description = 'Support the local businesses that pay to keep your streets clean. Find Clean My Street sponsors in your area.' %}
+{% set description = (c('sponsors.hero_lede') or 'Support the local businesses that pay to keep your streets clean.')|truncate(160) %}
 {% block main %}
 <section class="page-head">
   <div class="wrap">
-    <h1>Support the businesses that support your street</h1>
-    <p class="lede">These local businesses and associations put their own money into cleaner verges, drains and pavements in the neighbourhoods they serve. When you shop with them, you help keep that going.</p>
+    {% if c('sponsors.hero_title') %}<h1>{{ c('sponsors.hero_title') }}</h1>{% endif %}
+    {% if c('sponsors.hero_lede') %}<div class="lede lede--paras">{{ c('sponsors.hero_lede')|paragraphs }}</div>{% endif %}
   </div>
 </section>
 
+{% set why = [] %}{% for i in range(1, 4) %}{% if c('sponsors.why%d_title' % i) %}{% set _ = why.append(i) %}{% endif %}{% endfor %}
+{% if why %}
 <section class="section section--tight">
   <div class="wrap">
     <div class="local-why">
-      <div>{{ icon('pin', 26) }}<h3>They’re your neighbours</h3><p>Every sponsor here trades in the areas they help clean. The money stays on your streets.</p></div>
-      <div>{{ icon('shield', 26) }}<h3>Their support is real</h3><p>Each sponsor is linked to the actual projects they fund, with photos of the work, so you can see where it went.</p></div>
-      <div>{{ icon('check', 26) }}<h3>Your custom keeps it going</h3><p>Businesses that see a return from caring about the area keep sponsoring. Choosing them is the easiest way to say thanks.</p></div>
+      {% for i in why %}<div>{{ icon(['pin', 'shield', 'check'][i - 1], 26) }}<h3>{{ c('sponsors.why%d_title' % i) }}</h3>{{ c('sponsors.why%d_text' % i)|paragraphs }}</div>{% endfor %}
     </div>
   </div>
 </section>
+{% endif %}
 
 <section class="section" id="directory">
   <div class="wrap">
     <div class="section-head">
-      <h2>{% if area %}Sponsors in {{ area }}{% else %}Find a sponsor near you{% endif %}</h2>
+      <h2>{% if area %}Sponsors in {{ area }}{% else %}{{ c('sponsors.dir_heading') or 'Our sponsors' }}{% endif %}</h2>
       {% if areas|length > 1 %}
       <nav class="tabs" aria-label="Filter sponsors by area">
         <a href="{{ url_for('public.sponsors') }}#directory"{% if not area %} aria-current="page"{% endif %}>All areas <span class="count">{{ total }}</span></a>
@@ -54,46 +55,40 @@
     {% else %}
     <div class="empty">
       {% if area %}<h3>No sponsors in {{ area }} yet</h3><p>Know a business in {{ area }} that cares about the area? Point them to this page.</p><a class="btn btn--ghost" href="{{ url_for('public.sponsors') }}#directory">Show all areas</a>
-      {% else %}<h3>Be our first sponsor</h3><p>Your business could be the first name on this page.</p>{% endif %}
+      {% else %}<h3>Be our first sponsor</h3><p>{{ c('sponsors.dir_empty') }}</p>{% endif %}
     </div>
     {% endif %}
   </div>
 </section>
 
+{% set ways = [] %}{% for i in range(1, 5) %}{% if c('sponsors.ways%d_title' % i) %}{% set _ = ways.append(i) %}{% endif %}{% endfor %}
+{% if ways %}
 <section class="section section--paving">
   <div class="wrap">
-    <div class="section-head"><h2>Four easy ways to back them</h2><p>None of these cost you extra, and all of them help.</p></div>
+    <div class="section-head">{% if c('sponsors.ways_heading') %}<h2>{{ c('sponsors.ways_heading') }}</h2>{% endif %}{% if c('sponsors.ways_intro') %}<p>{{ c('sponsors.ways_intro') }}</p>{% endif %}</div>
     <ol class="steps">
-      <li><h3>Shop local first</h3><p>Before you buy online or drive across town, check whether a sponsor nearby sells it.</p></li>
-      <li><h3>Mention Clean My Street</h3><p>Tell them you found them here. It shows them their sponsorship is noticed, and some have a thank-you offer.</p></li>
-      <li><h3>Leave a review</h3><p>A quick Google review helps a small business more than almost anything else, and it’s free.</p></li>
-      <li><h3>Share them</h3><p>Post a sponsor’s page in your street or estate WhatsApp group when someone asks for a recommendation.</p></li>
+      {% for i in ways %}<li><h3>{{ c('sponsors.ways%d_title' % i) }}</h3>{{ c('sponsors.ways%d_text' % i)|paragraphs }}</li>{% endfor %}
     </ol>
   </div>
 </section>
+{% endif %}
 
 <section class="section">
   <div class="wrap two-col">
     <div>
-      <h2>Run a business that cares about your area?</h2>
-      <p class="lede">Clean streets bring people back. Sponsoring puts your name on the work your customers see every day.</p>
+      {% if c('sponsors.pitch_heading') %}<h2>{{ c('sponsors.pitch_heading') }}</h2>{% endif %}
+      <div class="lede lede--paras">{{ c('sponsors.pitch_lede')|paragraphs }}</div>
       <div class="values" style="grid-template-columns:1fr">
-        <div><h3>Top up a street</h3><p>Close the gap on a project near you that’s almost funded. Your logo goes on that project page.</p></div>
-        <div><h3>Adopt a street</h3><p>Fund the monthly upkeep of a road outside your business, with your logo on the project page and the site sign.</p></div>
-        <div><h3>Area partner</h3><p>Support a set number of cleans across a suburb each quarter, with homepage placement and a listing in this directory.</p></div>
+        {% for i in range(1, 4) %}{% if c('sponsors.tier%d_title' % i) %}<div><h3>{{ c('sponsors.tier%d_title' % i) }}</h3>{{ c('sponsors.tier%d_text' % i)|paragraphs }}</div>{% endif %}{% endfor %}
       </div>
     </div>
     <div class="panel">
-      <h3>What sponsors get</h3>
-      <ul class="ticks">
-        <li>{{ icon('check', 18) }} Your own page with your logo, story, website and neighbour offer</li>
-        <li>{{ icon('check', 18) }} Your logo on every project you support, with before-and-after photos</li>
-        <li>{{ icon('check', 18) }} A listing in this directory under your area</li>
-        <li>{{ icon('check', 18) }} Optional placement on the homepage</li>
-      </ul>
-      <p>Tell us your area and budget and we’ll suggest streets that would benefit most.</p>
+      {% if c('sponsors.gets_heading') %}<h3>{{ c('sponsors.gets_heading') }}</h3>{% endif %}
+      {% set gets = c('sponsors.gets_list')|lines %}
+      {% if gets %}<ul class="ticks">{% for item in gets %}<li>{{ icon('check', 18) }} {{ item }}</li>{% endfor %}</ul>{% endif %}
+      {{ c('sponsors.gets_text')|paragraphs }}
       <p><b>{{ site.contact_email }}</b>{% if site.contact_phone %}<br>{{ site.contact_phone }}{% endif %}</p>
-      <a class="btn btn--primary" href="mailto:{{ site.contact_email }}?subject=Sponsoring%20Clean%20My%20Street">Email us about sponsoring</a>
+      <a class="btn btn--primary" href="mailto:{{ site.contact_email }}?subject=Sponsoring%20Clean%20My%20Street">{{ c('sponsors.cta_button') or 'Email us' }}</a>
     </div>
   </div>
 </section>

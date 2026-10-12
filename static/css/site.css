@@ -1041,3 +1041,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--royal); box-shad
 .section--paving .sponsor-card, .section--paving .empty, .section--paving .panel { background: #fff; }
 .cover__photo--project { margin-top: clamp(12px, 2vw, 24px); }
 .sponsor-card .sponsor-card__meta span { background: #fff; }
+
+/* About page: pictures 30% smaller */
+.storyline__step { flex-basis: clamp(175px, 21vw, 252px); padding-right: 22px; }
+@media (max-width: 560px) { .storyline__step { flex-basis: 56vw; padding-right: 16px; } }
+.storyline__step .plate figcaption { font-size: .88rem; }
+.about-intro { grid-template-columns: minmax(0, .63fr) minmax(0, 1.37fr); }
+.custom-block--img { grid-template-columns: minmax(0, .63fr) minmax(0, 1.37fr); }
+@media (max-width: 860px) {
+  .about-intro, .custom-block--img { grid-template-columns: 1fr; }
+  .about-intro figure.plate, .custom-block--img figure.plate { max-width: 70%; }
+}
+.custom-block--img.custom-block--right { grid-template-columns: minmax(0, 1.37fr) minmax(0, .63fr); }
+@media (max-width: 860px) { .custom-block--img.custom-block--right { grid-template-columns: 1fr; } }

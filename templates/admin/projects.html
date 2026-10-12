@@ -8,10 +8,18 @@
   <a href="{{ url_for('admin.projects_list', tab=key) }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}</a>
   {% endfor %}
 </nav>
+{% if rows %}
+<div class="kpis" style="margin-bottom:18px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+  <div class="kpi"><b>{{ rows|sum(attribute='goal_cents')|rand }}</b><span>total charged</span></div>
+  <div class="kpi"><b>{{ rows|sum(attribute='budget_cents')|rand }}</b><span>our total cost</span></div>
+  {% set tp = rows|sum(attribute='profit_cents') %}
+  <div class="kpi kpi--{{ 'loss' if tp < 0 else 'ok' }}"><b>{{ tp|rand }}</b><span>profit if every goal is reached</span></div>
+</div>
+{% endif %}
 <section class="acard">
   {% if rows %}
   <div class="table-wrap"><table class="data">
-    <thead><tr><th>Project</th><th>Type</th><th>Status</th><th style="min-width:150px">Funding</th><th class="num">Budget</th><th class="num">Min.</th><th class="num">Deadline</th></tr></thead>
+    <thead><tr><th>Project</th><th>Type</th><th>Status</th><th style="min-width:150px">Funding</th><th class="num">Charge</th><th class="num">Our cost</th><th class="num">Profit</th><th class="num">Deadline</th></tr></thead>
     <tbody>
     {% for p in rows %}
     <tr>
@@ -19,8 +27,9 @@
       <td>{{ 'Monthly · #' ~ p.round_no if p.service_type == 'monthly' else 'Once-off' }}</td>
       <td><span class="pill pill--{{ p.status }}">{{ p.status_label }}</span></td>
       <td>{{ tape(p.pct, thin=True) }}<div class="tiny muted" style="margin-top:4px">{{ p.raised_cents|rand }} / {{ p.goal_cents|rand }} · {{ p.backers }}</div></td>
+      <td class="num">{{ p.goal_cents|rand }}</td>
       <td class="num">{{ p.budget_cents|rand }}</td>
-      <td class="num">{{ p.min_contribution_cents|rand }}</td>
+      <td class="num profit-cell profit-cell--{{ 'loss' if p.profit_cents < 0 else ('thin' if p.margin_pct < 10 else 'ok') }}"><b>{{ p.profit_cents|rand }}</b><div class="tiny">{{ '%g' % p.margin_pct }}%</div></td>
       <td class="num">{{ p.deadline|nice_date }}</td>
     </tr>
     {% endfor %}

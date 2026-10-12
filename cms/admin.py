@@ -9,7 +9,7 @@ from flask import (Blueprint, Response, abort, flash, g, redirect, render_templa
                    url_for)
 from werkzeug.security import check_password_hash
 
-from . import emails, notify
+from . import costing, emails, notify
 from .emails import abs_url, project_context, request_context
 from .db import execute, get_settings, log_activity, now_iso, query, set_setting
 from .services import (REQUEST_STATUS_LABELS, STATUS_LABELS, close_and_refund, create_project_from_request,
@@ -154,6 +154,10 @@ def request_detail(rid):
     if request.method == "POST":
         action = request.form.get("action")
 
+        if action == "save_quote" and "line_desc" in request.form:
+            _save_costing(req, quote, settings)
+            return redirect(url_for("admin.request_detail", rid=rid) + "#costing")
+
         if action == "save_quote":
             items = parse_line_items(request.form.get("line_items"))
             once = parse_rand(request.form.get("once_amount"))
@@ -179,7 +183,8 @@ def request_detail(rid):
             service = request.form.get("service_type", "once")
             goal = parse_rand(request.form.get("goal_amount")) or (
                 quote["monthly_cents"] if service == "monthly" else quote["once_cents"])
-            budget = parse_rand(request.form.get("budget_amount")) or goal
+            q_cost = (quote["monthly_cost_cents"] if service == "monthly" else quote["cost_cents"]) or 0
+            budget = parse_rand(request.form.get("budget_amount")) or q_cost or goal
             min_c = parse_rand(request.form.get("min_contribution")) or int(
                 settings["default_min_contribution_cents"])
             days = int(request.form.get("funding_days") or req["funding_days"] or 21)
@@ -201,6 +206,10 @@ def request_detail(rid):
                 req, quote, service_type=service, goal_cents=goal, budget_cents=budget,
                 min_contribution_cents=min_c, funding_days=days, title=title,
                 summary=request.form.get("summary", "").strip() or req["description"], cover_image=cover)
+            q_costing = costing.load(quote["costing"], settings) if quote["costing"] else None
+            if q_costing:
+                execute("UPDATE projects SET vat_pct=?, fee_pct=? WHERE id=?",
+                        (costing.VAT_PCT if q_costing["vat"] else 0, q_costing["fee_pct"], pid))
             project = get_project(pid)
             notify.send(req["email"], "request_approved", "request", rid,
                         **dict(project_context(project), **request_context(req)))
@@ -249,7 +258,12 @@ def request_detail(rid):
             flash("Request reopened.", "success")
         return redirect(url_for("admin.request_detail", rid=rid))
 
+    cst = costing.load(quote["costing"], settings) if quote and quote["costing"] else costing.defaults(settings)
+    if not cst["lines"]:
+        cst["monthly_on"] = req["service_pref"] in ("monthly", "unsure")
     return render_template("admin/request_detail.html", req=req, quote=quote,
+                           cst=cst, cst_result=costing.compute(cst), categories=costing.CATEGORIES, cat_labels=costing.CAT_LABEL,
+                           rate_card=costing.rate_card(settings.get("cost_rate_card")), vat_pct=costing.VAT_PCT,
                            items_text=line_items_text(load_json(quote["line_items"])) if quote else "",
                            settings=settings,
                            track_url=url_for("public.track", token=req["token"], _external=True),
@@ -323,6 +337,35 @@ def _project_picture(p, action, f):
         delete_upload(old)
     log_activity("project_picture", f"{p['title']}: {action}")
     flash(message, "success")
+
+
+def _save_costing(req, quote, settings):
+    """Save the costing builder: cost lines, our cost, the charge and the public quote lines."""
+    c = costing.from_form(request.form, settings)
+    result = costing.compute(c)
+    once, monthly = result["once"], result["monthly"]
+    if c["auto_public"]:
+        items = costing.public_lines(result, c["vat"])
+    else:
+        items = parse_line_items(request.form.get("line_items"))
+    data = (once["charge"], monthly["charge"] if monthly else 0, json.dumps(items),
+            clean_text(request.form.get("scope"), 3000, multiline=True), json.dumps(c), once["cost"],
+            monthly["cost"] if monthly else 0, now_iso())
+    if quote:
+        execute("UPDATE quotes SET once_cents=?, monthly_cents=?, line_items=?, scope=?, costing=?, cost_cents=?, "
+                "monthly_cost_cents=?, updated_at=? WHERE id=?", data + (quote["id"],))
+    else:
+        execute("INSERT INTO quotes(once_cents, monthly_cents, line_items, scope, costing, cost_cents, monthly_cost_cents, "
+                "updated_at, request_id) VALUES (?,?,?,?,?,?,?,?,?)", data + (req["id"],))
+    if req["status"] == "submitted":
+        execute("UPDATE requests SET status='under_review', updated_at=? WHERE id=?", (now_iso(), req["id"]))
+    log_activity("costing_saved", f"{req['ref']} cost={rand(once['cost'])} charge={rand(once['charge'])} "
+                                  f"profit={rand(once['profit'])}")
+    if once["profit"] < 0:
+        flash(f"Costing saved. Careful: at {rand(once['charge'])} this job loses {rand(-once['profit'])}.", "error")
+    else:
+        flash(f"Costing saved. Charge {rand(once['charge'])}, our cost {rand(once['cost'])}, "
+              f"profit {rand(once['profit'])} ({once['margin_pct']:g}%).", "success")
 
 
 def _notify_update(pid, form, image=None, video=None):
@@ -631,6 +674,14 @@ def settings_page():
             if key in f:
                 digits = "".join(ch for ch in f.get(key, "") if ch.isdigit())[:9]
                 set_setting(key, str(int(digits or 0)))
+        if "cost_contingency_pct" in f:
+            for key in ("cost_contingency_pct", "cost_overhead_pct", "cost_markup_pct", "cost_fee_pct",
+                        "cost_round_to", "cost_monthly_factor_pct"):
+                set_setting(key, "%g" % costing._num(f.get(key), float(costing.SETTING_DEFAULTS[key]), 0, 1000))
+            set_setting("cost_vat", "1" if f.get("cost_vat") else "0")
+            set_setting("cost_rate_card", "\n".join(
+                " | ".join([i["cat"], i["desc"], i["unit"], "%g" % (i["rate_cents"] / 100)])
+                for i in costing.rate_card(f.get("cost_rate_card", ""))))
         if "stats_mode" in f:
             set_setting("stats_mode", "exact" if f.get("stats_mode") == "exact" else "add")
         if "default_min_contribution" in f:

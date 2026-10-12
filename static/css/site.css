@@ -1114,3 +1114,79 @@ body { font-size: 15.3px; }
 @media (max-width: 900px) { .albums--home { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .albums--home { grid-template-columns: 1fr; } }
 .album__photo .pill--completed { background: var(--ink); color: #fff; }
+
+/* ------------------------------------------------------------ admin: costing builder */
+.costing__grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+@media (max-width: 1100px) { .costing__grid { grid-template-columns: 1fr; } }
+.costing h3 { font-size: 1.05rem; margin: 4px 0 12px; }
+.cost-lines { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.cost-lines th { text-align: left; font-size: .78rem; font-weight: 600; color: var(--muted); padding: 0 6px 6px; }
+.cost-lines td { padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+.cost-lines .num { text-align: right; }
+.cost-lines input, .cost-lines select { width: 100%; padding: 8px 10px; font-size: .92rem; border-radius: 8px; }
+.cost-lines select { min-width: 130px; }
+.cost-lines td:nth-child(2) { min-width: 180px; }
+.cost-lines .cost-num { width: 86px; text-align: right; }
+.cost-lines .cost-unit { width: 110px; }
+.cost-total { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 80px; }
+.cost-remove { border: 0; background: none; font-size: 1.3rem; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.cost-remove:hover { background: var(--danger-bg); color: var(--danger); }
+.cost-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.cost-add select { max-width: 340px; padding: 9px 12px; }
+.cost-opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin-bottom: 8px; }
+@media (max-width: 640px) { .cost-opts { grid-template-columns: 1fr 1fr; } }
+.cost-monthly { margin-top: 18px; padding: 14px 16px; background: var(--paving); border-radius: var(--r-md); }
+.cost-monthly .cost-opts { margin-top: 12px; grid-template-columns: 1fr 1fr; }
+.costing__summary { position: sticky; top: 16px; background: var(--paving); border-radius: var(--r-lg); padding: 20px; }
+.sum { margin: 0; display: grid; gap: 0; }
+.sum > div, .sum__group > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: .92rem; }
+.sum dt { color: var(--ink-2); }
+.sum dt span { display: block; font-size: .78rem; color: var(--muted); font-weight: 400; }
+.sum dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum__group { border-bottom: 1px dashed #d6dae3; padding-bottom: 4px; margin-bottom: 4px; }
+.sum__group:empty { display: none; }
+.sum__group > div { font-size: .85rem; color: var(--muted); }
+.sum__total { border-top: 1px solid #d6dae3; margin-top: 4px; padding-top: 10px !important; }
+.sum__total dt, .sum__total dd { font-weight: 700; color: var(--ink); }
+.sum__charge { background: #fff; border-radius: 10px; padding: 10px 12px !important; margin: 8px -4px; }
+.sum__charge dt { font-weight: 700; color: var(--ink); }
+.sum__charge dd { font-family: var(--display); font-size: 1.35rem; color: var(--ink); }
+.sum__profit { border-radius: 10px; padding: 10px 12px !important; margin: 6px -4px 0; background: var(--leaf-bg); }
+.sum__profit dt { font-weight: 700; color: #3c6e16; }
+.sum__profit dd { font-family: var(--display); font-size: 1.35rem; color: #3c6e16; }
+.sum__profit.is-thin { background: #fff6d6; }
+.sum__profit.is-thin dt, .sum__profit.is-thin dd { color: #7a5b00; }
+.sum__profit.is-loss { background: var(--danger-bg); }
+.sum__profit.is-loss dt, .sum__profit.is-loss dd { color: var(--danger); }
+.split-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin-top: 16px; background: #e4e7ec; }
+.split-bar span { flex-basis: 0; min-width: 0; }
+.split-bar__cost { background: var(--ink); }
+.split-bar__fees { background: #9aa3b8; }
+.split-bar__profit { background: var(--leaf); }
+.split-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .78rem; color: var(--muted); margin: 8px 0 0; align-items: center; }
+.split-legend .k { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.k--cost { background: var(--ink); } .k--fees { background: #9aa3b8; } .k--profit { background: var(--leaf); }
+.sum-monthly { margin-top: 18px; padding-top: 14px; border-top: 1px solid #d6dae3; }
+.sum-monthly h4 { margin: 0 0 6px; font-size: .95rem; }
+.approve-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.approve-sum div { background: var(--paving); border-radius: 10px; padding: 10px 12px; }
+.approve-sum span { display: block; font-size: .78rem; color: var(--muted); }
+.approve-sum b { font-family: var(--display); font-size: 1.1rem; }
+.approve-sum .is-loss b { color: var(--danger); }
+.kpi--ok b { color: #3c6e16; }
+.kpi--thin b { color: #7a5b00; }
+.kpi--loss b { color: var(--danger); }
+.profit-cell--ok b { color: #3c6e16; }
+.profit-cell--thin b { color: #7a5b00; }
+.profit-cell--loss b { color: var(--danger); }
+.profit-cell .tiny { color: var(--muted); }
+[hidden] { display: none !important; }
+.sum > .sum__group { display: block; }
+.cost-lines select { min-width: 0; width: 118px; padding-right: 4px; }
+.cost-lines td:nth-child(2) { min-width: 140px; }
+.cost-lines .cost-num { width: 64px; }
+.cost-lines td:nth-child(5) .cost-num { width: 76px; }
+.cost-lines .cost-unit { width: 92px; }
+.cost-lines td { padding: 4px 3px; }
+.cost-lines th { padding: 0 3px 6px; }
+.cost-total { min-width: 72px; padding-left: 8px !important; }

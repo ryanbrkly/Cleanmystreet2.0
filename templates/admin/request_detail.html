@@ -28,25 +28,7 @@
       {% if req.admin_note %}<div class="flash flash--info" style="margin-top:16px"><b>Last message to requester:</b> {{ req.admin_note }}</div>{% endif %}
     </section>
 
-    <section class="acard" id="quote">
-      <h2>Quote {% if quote %}<span class="tiny muted">saved {{ quote.updated_at|nice_datetime }}</span>{% endif %}</h2>
-      <form method="post">
-        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="save_quote">
-        <div class="form-grid">
-          <div class="full field">
-            <label for="li">Line items</label>
-            <textarea id="li" name="line_items" rows="6" placeholder="Verge brush-cutting (both sides) | 5200&#10;Storm-water drain clearing (6 drains) | 4800&#10;Debris removal and dumping fees | 3000">{{ items_text }}</textarea>
-            <div class="hint">One item per line: <code>Description | amount in rand</code>. The once-off total is calculated from these if you leave it blank.</div>
-          </div>
-          <div class="field"><label for="once">Once-off price (R)</label><input id="once" type="text" inputmode="decimal" name="once_amount" value="{{ (quote.once_cents / 100)|int if quote and quote.once_cents else '' }}"></div>
-          <div class="field"><label for="monthly">Monthly upkeep price (R)</label><input id="monthly" type="text" inputmode="decimal" name="monthly_amount" value="{{ (quote.monthly_cents / 100)|int if quote and quote.monthly_cents else '' }}"><div class="hint">Leave blank if not offered.</div></div>
-          <div class="full field"><label for="scope">Scope of work (shown publicly)</label><textarea id="scope" name="scope" rows="3">{{ quote.scope if quote else '' }}</textarea></div>
-        </div>
-        <button class="btn btn--primary btn--sm" type="submit" style="margin-top:14px">Save quote</button>
-      </form>
-    </section>
-    {% include "admin/_email_history.html" %}
+
   </div>
 
   <div>
@@ -56,7 +38,14 @@
       <div class="decision">
         <details open>
           <summary>Approve and publish funding page</summary>
-          {% if not quote %}<p class="muted small">Save a quote first.</p>{% else %}
+          {% if not quote %}<p class="muted small">Build the costing below and save it first. <a href="#costing">Go to costing</a></p>{% else %}
+          {% if quote.cost_cents %}
+          <div class="approve-sum">
+            <div><span>Charge</span><b>{{ quote.once_cents|rand }}</b></div>
+            <div><span>Our cost</span><b>{{ quote.cost_cents|rand }}</b></div>
+            <div class="{{ 'is-loss' if cst_result.once.profit < 0 }}"><span>Profit</span><b>{{ cst_result.once.profit|rand }}</b></div>
+          </div>
+          {% endif %}
           <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="approve">
@@ -68,8 +57,8 @@
               <label><input type="radio" name="service_type" value="monthly" {% if req.service_pref == 'monthly' and quote.monthly_cents %}checked{% endif %}{% if not quote.monthly_cents %} disabled{% endif %}><span><b>Monthly</b>{{ (quote.monthly_cents|rand ~ ' / month') if quote.monthly_cents else 'not quoted' }}</span></label>
             </div>
             <div class="form-grid">
-              <div class="field"><label for="goal">Funding goal (R)</label><input id="goal" type="text" inputmode="decimal" name="goal_amount" placeholder="Defaults to the quote"><div class="hint">What neighbours must raise.</div></div>
-              <div class="field"><label for="budget">Overall budget (R)</label><input id="budget" type="text" inputmode="decimal" name="budget_amount" placeholder="Defaults to goal"><div class="hint">Internal cost to deliver.</div></div>
+              <div class="field"><label for="goal">Funding goal (R)</label><input id="goal" type="text" inputmode="decimal" name="goal_amount" placeholder="{{ ('Quote: R' ~ ((quote.once_cents / 100)|int)) if quote and quote.once_cents else 'Defaults to the quote' }}"><div class="hint">What neighbours must raise.</div></div>
+              <div class="field"><label for="budget">Our cost (R)</label><input id="budget" type="text" inputmode="decimal" name="budget_amount" placeholder="{{ ('Our cost: R' ~ ((quote.cost_cents / 100)|int)) if quote and quote.cost_cents else 'Defaults to goal' }}"><div class="hint">Our cost to deliver. Never shown publicly.</div></div>
               <div class="field"><label for="minc">Minimum contribution (R)</label><input id="minc" type="text" inputmode="decimal" name="min_contribution" value="{{ (settings.default_min_contribution_cents|int / 100)|int }}"><div class="hint">Per household / street owner.</div></div>
               <div class="field"><label for="days">Funding deadline</label><select id="days" name="funding_days">{% for d in (7, 14, 21, 30, 45, 60) %}<option value="{{ d }}"{% if d == (settings.default_funding_days|int(21)) %} selected{% endif %}>{{ d }} days from today</option>{% endfor %}</select><div class="hint">Shown on the project page. If the goal isn’t met by then, everyone is refunded.</div></div>
             </div>
@@ -128,4 +117,118 @@
     {% endif %}
   </div>
 </div>
+
+{% set r = cst_result.once %}
+{% macro money(c) %}{{ c|rand }}{% endmacro %}
+<section class="acard costing" id="costing">
+  <h2>Costing and quote {% if quote %}<span class="tiny muted">saved {{ quote.updated_at|nice_datetime }}</span>{% endif %}</h2>
+  {% if quote and not quote.costing and quote.once_cents %}<p class="small muted" style="margin-top:-6px">This quote was made before costing existed ({{ quote.once_cents|rand }}). Add the costs below and save to see the profit.</p>{% endif %}
+  <form method="post" data-costing data-vat="{{ vat_pct }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save_quote">
+    <div class="costing__grid">
+      <div class="costing__main">
+        <h3>What the job costs us</h3>
+        <div class="table-wrap">
+        <table class="cost-lines">
+          <thead><tr><th>Type</th><th>Item</th><th class="num">Qty</th><th>Unit</th><th class="num">Rate (R)</th><th class="num">Total</th><th><span class="visually-hidden">Remove</span></th></tr></thead>
+          <tbody data-cost-rows>
+          {% set rows = cst_result.lines + [{}, {}, {}] if cst_result.lines|length < 3 else cst_result.lines + [{}] %}
+          {% for line in rows %}
+            <tr class="cost-row">
+              <td><select name="line_cat" aria-label="Type">{% for k, label, _ in categories %}<option value="{{ k }}"{% if line.cat == k %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+              <td><input type="text" name="line_desc" value="{{ line.desc or '' }}" placeholder="e.g. General workers" aria-label="Item"></td>
+              <td class="num"><input type="text" inputmode="decimal" name="line_qty" value="{{ ('%g' % line.qty) if line.qty else '' }}" aria-label="Quantity" class="cost-num"></td>
+              <td><input type="text" name="line_unit" value="{{ line.unit or '' }}" placeholder="worker-day" aria-label="Unit" class="cost-unit"></td>
+              <td class="num"><input type="text" inputmode="decimal" name="line_rate" value="{{ ('%g' % (line.rate_cents / 100)) if line.rate_cents else '' }}" aria-label="Rate in rand" class="cost-num"></td>
+              <td class="num cost-total" data-line-total>{{ line.total|rand if line.total else '—' }}</td>
+              <td><button type="button" class="cost-remove" data-cost-remove aria-label="Remove line">×</button></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="cost-add">
+          <button type="button" class="btn btn--ghost btn--sm" data-cost-add>Add a line</button>
+          {% if rate_card %}
+          <label class="visually-hidden" for="preset">Add from your rate card</label>
+          <select id="preset" data-cost-preset>
+            <option value="">Add from your rate card…</option>
+            {% for item in rate_card %}<option value="{{ loop.index0 }}" data-cat="{{ item.cat }}" data-desc="{{ item.desc }}" data-unit="{{ item.unit }}" data-rate="{{ '%g' % (item.rate_cents / 100) }}">{{ item.desc }}, R{{ '%g' % (item.rate_cents / 100) }} per {{ item.unit }}</option>{% endfor %}
+          </select>
+          {% endif %}
+          <a class="small" href="{{ url_for('admin.settings_page') }}#costing-defaults">Edit rate card</a>
+        </div>
+
+        <h3 style="margin-top:22px">Pricing</h3>
+        <div class="cost-opts">
+          <div class="field"><label for="cp">Contingency %</label><input id="cp" type="text" inputmode="decimal" name="contingency_pct" value="{{ '%g' % cst.contingency_pct }}"><div class="hint">For surprises on site.</div></div>
+          <div class="field"><label for="op">Overhead %</label><input id="op" type="text" inputmode="decimal" name="overhead_pct" value="{{ '%g' % cst.overhead_pct }}"><div class="hint">Office, insurance, admin.</div></div>
+          <div class="field"><label for="mp">Markup %</label><input id="mp" type="text" inputmode="decimal" name="markup_pct" value="{{ '%g' % cst.markup_pct }}"><div class="hint">Added on top of our cost.</div></div>
+          <div class="field"><label for="fp">Card fees %</label><input id="fp" type="text" inputmode="decimal" name="fee_pct" value="{{ '%g' % cst.fee_pct }}"><div class="hint">Check your Yoco rate.</div></div>
+          <div class="field"><label for="rt">Round charge up to R</label><input id="rt" type="text" inputmode="decimal" name="round_to" value="{{ '%g' % cst.round_to }}"></div>
+          <div class="field"><span class="label">VAT</span><label class="check" style="margin-top:8px"><input type="checkbox" name="vat" value="1"{% if cst.vat %} checked{% endif %}> <span>Add VAT ({{ '%g' % vat_pct }}%)</span></label></div>
+        </div>
+        <div class="field" style="max-width:340px;margin-top:6px"><label for="po">Or set the charge yourself (R, optional)</label><input id="po" type="text" inputmode="decimal" name="price_override" value="{{ ('%g' % (cst.price_override_cents / 100)) if cst.price_override_cents else '' }}" placeholder="Leave empty to use the markup"><div class="hint">What neighbours raise, including VAT if you charge it.</div></div>
+
+        <div class="cost-monthly">
+          <label class="check"><input type="checkbox" name="monthly_on" value="1" data-monthly-toggle{% if cst.monthly_on %} checked{% endif %}> <span><b>Also quote monthly upkeep</b></span></label>
+          <div class="cost-opts" data-monthly-fields{% if not cst.monthly_on %} hidden{% endif %}>
+            <div class="field"><label for="mv">Visits per month</label><input id="mv" type="text" inputmode="decimal" name="monthly_visits" value="{{ '%g' % cst.monthly_visits }}"></div>
+            <div class="field"><label for="mf">Each visit costs (% of the first clean)</label><input id="mf" type="text" inputmode="decimal" name="monthly_factor_pct" value="{{ '%g' % cst.monthly_factor_pct }}"><div class="hint">Upkeep is usually lighter than the first clean.</div></div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:22px">What neighbours see</h3>
+        <div class="field"><label for="scope">Scope of work</label><textarea id="scope" name="scope" rows="3" placeholder="e.g. Both verges cut back to kerb, 6 storm-water drains cleared, pavements swept, all debris removed.">{{ quote.scope if quote else '' }}</textarea></div>
+        <label class="check" style="margin-top:12px"><input type="checkbox" name="auto_public" value="1" data-public-toggle{% if cst.auto_public %} checked{% endif %}> <span>Build the public quote from these costs. Neighbours see totals per type (labour, materials…) that add up to the charge, never your rates or profit.</span></label>
+        <div class="field" data-public-manual{% if cst.auto_public %} hidden{% endif %} style="margin-top:10px"><label for="li">Public quote lines</label><textarea id="li" name="line_items" rows="5" placeholder="Verge brush-cutting (both sides) | 5200">{{ items_text }}</textarea><div class="hint">One per line: <code>Description | amount in rand</code>.</div></div>
+      </div>
+
+      <aside class="costing__summary" aria-live="polite">
+        <h3>Cost vs charge</h3>
+        <dl class="sum">
+          <div class="sum__group" data-sum-cats>{% for k, v in r.by_cat.items() %}<div><dt>{{ cat_labels[k] }}</dt><dd>{{ v|rand }}</dd></div>{% endfor %}</div>
+          <div><dt>Direct costs</dt><dd data-out="direct">{{ r.direct|rand }}</dd></div>
+          <div><dt>Contingency</dt><dd data-out="contingency">{{ r.contingency|rand }}</dd></div>
+          <div><dt>Overhead</dt><dd data-out="overhead">{{ r.overhead|rand }}</dd></div>
+          <div class="sum__total"><dt>Our cost</dt><dd data-out="cost">{{ r.cost|rand }}</dd></div>
+          <div><dt>Charge excl. VAT</dt><dd data-out="excl">{{ r.excl|rand }}</dd></div>
+          <div data-vat-row{% if not cst.vat %} hidden{% endif %}><dt>VAT</dt><dd data-out="vat">{{ r.vat|rand }}</dd></div>
+          <div class="sum__charge"><dt>Charge to neighbours<span>the funding goal</span></dt><dd data-out="charge">{{ r.charge|rand }}</dd></div>
+          <div><dt>Card fees</dt><dd data-out="fees">{{ r.fees|rand }}</dd></div>
+          <div class="sum__profit {{ 'is-loss' if r.profit < 0 else ('is-thin' if r.margin_pct < 10 else '') }}" data-profit-row><dt>Our profit<span data-out="margin">{{ '%g' % r.margin_pct }}% margin · {{ '%g' % r.markup_pct }}% markup</span></dt><dd data-out="profit">{{ r.profit|rand }}</dd></div>
+        </dl>
+        <div class="split-bar" data-split aria-hidden="true">
+          <span class="split-bar__cost" style="flex-grow:{{ [r.cost, 0]|max }}"></span>
+          <span class="split-bar__fees" style="flex-grow:{{ r.fees }}"></span>
+          <span class="split-bar__profit" style="flex-grow:{{ [r.profit, 0]|max }}"></span>
+        </div>
+        <p class="split-legend"><span class="k k--cost"></span>Our cost <span class="k k--fees"></span>Fees <span class="k k--profit"></span>Profit</p>
+        <div class="sum-monthly" data-monthly-sum{% if not cst_result.monthly %} hidden{% endif %}>
+          <h4>Monthly upkeep</h4>
+          {% set m = cst_result.monthly or {} %}
+          <dl class="sum">
+            <div><dt>Our cost / month</dt><dd data-out="m_cost">{{ (m.cost or 0)|rand }}</dd></div>
+            <div class="sum__charge"><dt>Charge / month</dt><dd data-out="m_charge">{{ (m.charge or 0)|rand }}</dd></div>
+            <div class="sum__profit" data-mprofit-row><dt>Profit / month<span data-out="m_margin">{{ '%g' % (m.margin_pct or 0) }}% margin</span></dt><dd data-out="m_profit">{{ (m.profit or 0)|rand }}</dd></div>
+          </dl>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit" style="margin-top:16px">Save costing and quote</button>
+        <p class="tiny muted" style="margin:8px 0 0">Saving sets the quote. Approve on the right to publish it.</p>
+      </aside>
+    </div>
+    <template id="cost-row-template">
+      <tr class="cost-row">
+        <td><select name="line_cat" aria-label="Type">{% for k, label, _ in categories %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select></td>
+        <td><input type="text" name="line_desc" aria-label="Item"></td>
+        <td class="num"><input type="text" inputmode="decimal" name="line_qty" aria-label="Quantity" class="cost-num"></td>
+        <td><input type="text" name="line_unit" aria-label="Unit" class="cost-unit"></td>
+        <td class="num"><input type="text" inputmode="decimal" name="line_rate" aria-label="Rate in rand" class="cost-num"></td>
+        <td class="num cost-total" data-line-total>—</td>
+        <td><button type="button" class="cost-remove" data-cost-remove aria-label="Remove line">×</button></td>
+      </tr>
+    </template>
+  </form>
+</section>
+{% include "admin/_email_history.html" %}
 {% endblock %}

@@ -34,6 +34,21 @@
       <div class="field" style="margin-bottom:10px"><label for="wa">WhatsApp number</label><input id="wa" type="tel" name="whatsapp_number" value="{{ s.whatsapp_number }}" placeholder="+27 82 000 0000"></div>
       <div class="field"><label for="sa">Service areas</label><input id="sa" type="text" name="service_areas" value="{{ s.service_areas }}"></div>
     </section>
+    <section class="acard" id="costing-defaults">
+      <h2>Costing defaults</h2>
+      <p class="small muted" style="margin-top:-6px">Starting values for every new costing. You can still change them per job.</p>
+      <div class="form-grid">
+        <div class="field"><label for="c-cont">Contingency %</label><input id="c-cont" type="text" inputmode="decimal" name="cost_contingency_pct" value="{{ s.cost_contingency_pct }}"></div>
+        <div class="field"><label for="c-over">Overhead %</label><input id="c-over" type="text" inputmode="decimal" name="cost_overhead_pct" value="{{ s.cost_overhead_pct }}"></div>
+        <div class="field"><label for="c-mark">Markup %</label><input id="c-mark" type="text" inputmode="decimal" name="cost_markup_pct" value="{{ s.cost_markup_pct }}"></div>
+        <div class="field"><label for="c-fee">Card fees %</label><input id="c-fee" type="text" inputmode="decimal" name="cost_fee_pct" value="{{ s.cost_fee_pct }}"><div class="hint">Your Yoco rate.</div></div>
+        <div class="field"><label for="c-round">Round charge up to R</label><input id="c-round" type="text" inputmode="decimal" name="cost_round_to" value="{{ s.cost_round_to }}"></div>
+        <div class="field"><label for="c-mon">Monthly visit cost (% of first clean)</label><input id="c-mon" type="text" inputmode="decimal" name="cost_monthly_factor_pct" value="{{ s.cost_monthly_factor_pct }}"></div>
+        <div class="field full"><label class="check"><input type="checkbox" name="cost_vat" value="1"{% if s.cost_vat == '1' %} checked{% endif %}> <span>We’re VAT registered: add 15% VAT to charges</span></label></div>
+        <div class="field full"><label for="c-rates">Rate card</label><textarea id="c-rates" name="cost_rate_card" rows="9" spellcheck="false" class="code" style="min-height:0">{{ s.cost_rate_card }}</textarea>
+          <div class="hint">One per line: <code>type | item | unit | rate in rand</code>. Types: labour, materials, equipment, transport, disposal, other. These appear in “Add from your rate card” when costing a job. The starting list is a sample: change it to your real rates.</div></div>
+      </div>
+    </section>
     <section class="acard" id="numbers">
       <h2>Numbers on the website</h2>
       <p class="small muted" style="margin-top:-6px">Shown in the strip under the homepage photo and on the About page.</p>

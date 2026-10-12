@@ -66,6 +66,13 @@ def project_view(row):
     p["line_items_list"] = load_json(p.get("line_items"), [])
     p["location"] = ", ".join(x for x in (p["suburb"], p["city"]) if x)
     p["is_open_for_funding"] = p["status"] == "funding" and p["days_left"] >= 0
+    # what we make if the goal is reached: charge excl. VAT, less our cost and card fees
+    vat = float(p.get("vat_pct") or 0)
+    fee = float(p.get("fee_pct") or 0)
+    excl = int(round(p["goal_cents"] / (1 + vat / 100)))
+    p["fees_cents"] = int(round(p["goal_cents"] * fee / 100))
+    p["profit_cents"] = excl - int(p.get("budget_cents") or 0) - p["fees_cents"]
+    p["margin_pct"] = round(p["profit_cents"] * 100 / excl, 1) if excl else 0.0
     return p
 
 

@@ -36,6 +36,8 @@ DEFAULT_SETTINGS = {
     "admin_notify_email": "",
     "stats_mode": "add",
 }
+from .costing import SETTING_DEFAULTS as _COST_DEFAULTS  # noqa: E402
+DEFAULT_SETTINGS.update(_COST_DEFAULTS)
 
 
 # ---------------------------------------------------------------- Turso (Hrana over HTTP)
@@ -215,6 +217,11 @@ MIGRATIONS = [
     ("sponsors", "address", "TEXT NOT NULL DEFAULT ''"),
     ("projects", "reminder_sent", "INTEGER NOT NULL DEFAULT 0"),
     ("projects", "cover_position", "TEXT NOT NULL DEFAULT 'center'"),
+    ("quotes", "costing", "TEXT NOT NULL DEFAULT ''"),
+    ("quotes", "cost_cents", "INTEGER NOT NULL DEFAULT 0"),
+    ("quotes", "monthly_cost_cents", "INTEGER NOT NULL DEFAULT 0"),
+    ("projects", "vat_pct", "REAL NOT NULL DEFAULT 0"),
+    ("projects", "fee_pct", "REAL NOT NULL DEFAULT 0"),
 ]
 
 

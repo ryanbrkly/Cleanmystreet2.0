@@ -194,6 +194,113 @@
     refresh();
   }
 
+  // Costing builder: live totals that mirror cms/costing.py
+  document.querySelectorAll("form[data-costing]").forEach(function (form) {
+    var VAT = parseFloat(form.getAttribute("data-vat")) || 15;
+    var rowsBox = form.querySelector("[data-cost-rows]");
+    var tpl = document.getElementById("cost-row-template");
+    var labels = {};
+    var firstSelect = form.querySelector("select[name=line_cat]");
+    if (firstSelect) Array.prototype.forEach.call(firstSelect.options, function (o) { labels[o.value] = o.textContent; });
+    function num(v) {
+      var n = parseFloat(String(v || "").replace(/[R\s ]/g, "").replace(",", "."));
+      return isFinite(n) && n > 0 ? n : 0;
+    }
+    function val(name, dflt) { var el = form.elements[name]; if (!el) return dflt; var n = parseFloat(String(el.value).replace(",", ".")); return isFinite(n) ? Math.max(0, n) : dflt; }
+    function rand(cents) {
+      var neg = cents < 0, r = Math.abs(cents) / 100;
+      var s = (Math.round(r) === r ? Math.round(r).toString() : r.toFixed(2)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      return (neg ? "-R" : "R") + s;
+    }
+    function roundUp(cents, step) { step = Math.round(step * 100); return step > 0 ? Math.ceil(cents / step - 1e-9) * step : Math.round(cents); }
+    function price(cost, o, override) {
+      cost = Math.round(cost);
+      var v = o.vat ? VAT / 100 : 0;
+      var charge = override ? Math.round(override) : roundUp(cost * (1 + o.markup / 100) * (1 + v), o.round);
+      var excl = Math.round(charge / (1 + v)), fees = Math.round(charge * o.fee / 100), profit = excl - cost - fees;
+      return { cost: cost, charge: charge, excl: excl, vat: charge - excl, fees: fees, profit: profit,
+               margin: excl ? Math.round(profit * 1000 / excl) / 10 : 0, markup: cost ? Math.round((excl - cost) * 1000 / cost) / 10 : 0 };
+    }
+    function out(name, text) { var el = form.querySelector('[data-out="' + name + '"]'); if (el) el.textContent = text; }
+    function calc() {
+      var byCat = {}, order = [], direct = 0;
+      form.querySelectorAll(".cost-row").forEach(function (row) {
+        var q = num(row.querySelector("[name=line_qty]").value), r = Math.round(num(row.querySelector("[name=line_rate]").value) * 100);
+        var total = Math.round(q * r), cat = row.querySelector("[name=line_cat]").value;
+        row.querySelector("[data-line-total]").textContent = total ? rand(total) : "—";
+        if (total) { if (!(cat in byCat)) { byCat[cat] = 0; order.push(cat); } byCat[cat] += total; direct += total; }
+      });
+      var o = { markup: val("markup_pct", 30), vat: form.elements.vat && form.elements.vat.checked, fee: val("fee_pct", 0), round: val("round_to", 10) };
+      var cont = direct * val("contingency_pct", 0) / 100, over = (direct + cont) * val("overhead_pct", 0) / 100;
+      var costF = direct + cont + over;
+      var p = price(costF, o, Math.round(num(form.elements.price_override && form.elements.price_override.value) * 100));
+      var cats = form.querySelector("[data-sum-cats]");
+      if (cats) {
+        cats.innerHTML = "";
+        Object.keys(labels).forEach(function (k) {
+          if (!byCat[k]) return;
+          var d = document.createElement("div"), dt = document.createElement("dt"), dd = document.createElement("dd");
+          dt.textContent = labels[k]; dd.textContent = rand(byCat[k]); d.appendChild(dt); d.appendChild(dd); cats.appendChild(d);
+        });
+      }
+      out("direct", rand(direct)); out("contingency", rand(Math.round(cont))); out("overhead", rand(Math.round(over)));
+      out("cost", rand(p.cost)); out("excl", rand(p.excl)); out("vat", rand(p.vat)); out("charge", rand(p.charge));
+      out("fees", rand(p.fees)); out("profit", rand(p.profit)); out("margin", p.margin + "% margin · " + p.markup + "% markup");
+      var vr = form.querySelector("[data-vat-row]"); if (vr) vr.hidden = !o.vat;
+      var pr = form.querySelector("[data-profit-row]");
+      if (pr) { pr.classList.toggle("is-loss", p.profit < 0); pr.classList.toggle("is-thin", p.profit >= 0 && p.margin < 10); }
+      var bar = form.querySelector("[data-split]");
+      if (bar) { var sp = bar.children; sp[0].style.flexGrow = Math.max(p.cost, 0); sp[1].style.flexGrow = p.fees; sp[2].style.flexGrow = Math.max(p.profit, 0); }
+      var mOn = form.elements.monthly_on && form.elements.monthly_on.checked;
+      var mf = form.querySelector("[data-monthly-fields]"); if (mf) mf.hidden = !mOn;
+      var ms = form.querySelector("[data-monthly-sum]");
+      var visits = val("monthly_visits", 1);
+      if (ms) ms.hidden = !(mOn && visits);
+      if (mOn && visits) {
+        var m = price(costF * val("monthly_factor_pct", 60) / 100 * visits, o, 0);
+        out("m_cost", rand(m.cost)); out("m_charge", rand(m.charge)); out("m_profit", rand(m.profit)); out("m_margin", m.margin + "% margin");
+        var mr = form.querySelector("[data-mprofit-row]"); if (mr) mr.classList.toggle("is-loss", m.profit < 0);
+      }
+      var man = form.querySelector("[data-public-manual]");
+      if (man && form.elements.auto_public) man.hidden = form.elements.auto_public.checked;
+    }
+    function addRow(data) {
+      if (!tpl || !rowsBox) return null;
+      var row = tpl.content.firstElementChild.cloneNode(true);
+      if (data) {
+        row.querySelector("[name=line_cat]").value = data.cat;
+        row.querySelector("[name=line_desc]").value = data.desc;
+        row.querySelector("[name=line_unit]").value = data.unit;
+        row.querySelector("[name=line_rate]").value = data.rate;
+        row.querySelector("[name=line_qty]").value = "1";
+      }
+      rowsBox.appendChild(row);
+      return row;
+    }
+    form.addEventListener("input", calc);
+    form.addEventListener("change", calc);
+    form.addEventListener("click", function (e) {
+      if (e.target.closest("[data-cost-add]")) { var r = addRow(); if (r) r.querySelector("[name=line_desc]").focus(); calc(); }
+      var rm = e.target.closest("[data-cost-remove]");
+      if (rm) { var tr = rm.closest("tr"); if (form.querySelectorAll(".cost-row").length > 1) tr.remove(); else tr.querySelectorAll("input").forEach(function (i) { i.value = ""; }); calc(); }
+    });
+    var preset = form.querySelector("[data-cost-preset]");
+    if (preset) preset.addEventListener("change", function () {
+      var opt = preset.selectedOptions[0];
+      if (!opt || !opt.value) return;
+      // fill the first empty row, or add one
+      var empty = Array.prototype.find.call(form.querySelectorAll(".cost-row"), function (r) { return !r.querySelector("[name=line_desc]").value && !r.querySelector("[name=line_rate]").value; });
+      var data = { cat: opt.getAttribute("data-cat"), desc: opt.getAttribute("data-desc"), unit: opt.getAttribute("data-unit"), rate: opt.getAttribute("data-rate") };
+      var row = empty;
+      if (row) { row.querySelector("[name=line_cat]").value = data.cat; row.querySelector("[name=line_desc]").value = data.desc; row.querySelector("[name=line_unit]").value = data.unit; row.querySelector("[name=line_rate]").value = data.rate; row.querySelector("[name=line_qty]").value = "1"; }
+      else row = addRow(data);
+      preset.value = "";
+      calc();
+      var q = row && row.querySelector("[name=line_qty]"); if (q) { q.focus(); q.select(); }
+    });
+    calc();
+  });
+
   // Confirm destructive admin actions
   document.querySelectorAll("form[data-confirm]").forEach(function (f) {
     f.addEventListener("submit", function (e) {

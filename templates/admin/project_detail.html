@@ -22,7 +22,8 @@
   <div class="kpis" style="margin:16px 0 0;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
     <div class="kpi"><b>{{ p.raised_cents|rand }}</b><span>raised of {{ p.goal_cents|rand }}</span></div>
     <div class="kpi"><b>{{ p.backers }}</b><span>contributors</span></div>
-    <div class="kpi"><b>{{ p.budget_cents|rand }}</b><span>overall budget</span></div>
+    <div class="kpi"><b>{{ p.budget_cents|rand }}</b><span>our cost</span></div>
+    <div class="kpi kpi--{{ 'loss' if p.profit_cents < 0 else ('thin' if p.margin_pct < 10 else 'ok') }}"><b>{{ p.profit_cents|rand }}</b><span>profit at goal · {{ '%g' % p.margin_pct }}%</span></div>
     <div class="kpi"><b>{{ p.min_contribution_cents|rand }}</b><span>minimum contribution</span></div>
     <div class="kpi"><b>{% if p.status == 'funding' %}{{ p.days_left }} days{% else %}{{ p.deadline|nice_date }}{% endif %}</b><span>{{ 'left to deadline' if p.status == 'funding' else 'deadline' }}</span></div>
   </div>
@@ -182,7 +183,7 @@
         <div class="field" style="margin-bottom:10px"><label for="tt">Title</label><input id="tt" type="text" name="title" value="{{ p.title }}"></div>
         <div class="form-grid">
           <div class="field"><label for="g">Funding goal (R)</label><input id="g" type="text" inputmode="decimal" name="goal_amount" value="{{ (p.goal_cents / 100)|int }}"></div>
-          <div class="field"><label for="b">Overall budget (R)</label><input id="b" type="text" inputmode="decimal" name="budget_amount" value="{{ (p.budget_cents / 100)|int }}"></div>
+          <div class="field"><label for="b">Our cost (R)</label><input id="b" type="text" inputmode="decimal" name="budget_amount" value="{{ (p.budget_cents / 100)|int }}"></div>
           <div class="field"><label for="m">Minimum contribution (R)</label><input id="m" type="text" inputmode="decimal" name="min_contribution" value="{{ (p.min_contribution_cents / 100)|int }}"></div>
           <div class="field"><label for="d">Deadline</label><input id="d" type="date" name="deadline" value="{{ p.deadline }}"></div>
           <div class="field full"><label for="sf">Clean scheduled for</label><input id="sf" type="date" name="scheduled_for" value="{{ p.scheduled_for or '' }}"></div>

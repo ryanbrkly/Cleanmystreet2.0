@@ -21,6 +21,8 @@ SAST = timezone(timedelta(hours=2))
 def rand(cents, decimals=False):
     """Format cents as South African rand, e.g. 125000 -> 'R1 250'."""
     cents = int(cents or 0)
+    if cents < 0:
+        return "-" + rand(-cents, decimals)
     value = cents / 100
     if decimals or cents % 100:
         text = f"{value:,.2f}"

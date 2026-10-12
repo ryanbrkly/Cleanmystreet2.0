@@ -177,3 +177,26 @@ class AboutBlocksTests(Base):
         self.client.post("/admin/logout", data={"_csrf": token})
         fresh = self.app.test_client()
         self.assertEqual(fresh.get("/admin/about-layout").status_code, 302)
+
+
+class BenefitsTests(Base):
+    def test_page_menu_homepage_and_editing(self):
+        page = self.client.get("/why-clean-streets").get_data(as_text=True)
+        self.assertIn("Your property holds its value", page)
+        self.assertIn("41.5%", page)
+        self.assertIn("privateproperty.co.za", page)
+        home = self.client.get("/").get_data(as_text=True)
+        self.assertIn('>Home</a>', home)
+        self.assertIn('href="/why-clean-streets"', home)
+        self.assertIn("Why a clean street pays off", home)
+        self.assertIn("/why-clean-streets", self.client.get("/sitemap.xml").get_data(as_text=True))
+        token = self.login()
+        self.assertIn('name="benefits.b1_title"', self.client.get("/admin/content/benefits").get_data(as_text=True))
+        self.client.post("/admin/content/benefits", data={
+            "_csrf": token, "benefits.b2_title": "", "benefits.b1_source_url": "javascript:alert(1)",
+            "benefits.home_heading": ""})
+        page = self.client.get("/why-clean-streets").get_data(as_text=True)
+        self.assertNotIn("You feel better living there", page)
+        self.assertNotIn("javascript:", page)
+        self.assertIn("Seeff Property Group", page)  # source name kept, link dropped
+        self.assertNotIn("Why a clean street pays off", self.client.get("/").get_data(as_text=True))

@@ -141,6 +141,7 @@ def create_app(test_config=None):
         photo_url=utils.photo_url,
         paragraphs=content.paragraphs,
         lines=content.lines,
+        safe_href=lambda u: utils.safe_url(u, allow_relative=True),
     )
     app.jinja_env.globals.update(c=content.get)
 

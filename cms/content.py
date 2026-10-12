@@ -108,6 +108,81 @@ PAGES = {
             ]),
         ],
     },
+    "benefits": {
+        "label": "Why it matters page",
+        "endpoint": "public.benefits",
+        "sections": [
+            ("Top of the page", [
+                ("benefits.hero_title", "Heading", T, "A clean street pays you back"),
+                ("benefits.hero_lede", "Introduction", A,
+                 "Clean verges, clear drains and tidy pavements do more than look good. They protect what your home "
+                 "is worth, make the street a better place to live and help keep everyone on it safer."),
+            ]),
+            ("Benefit 1: property value", [
+                ("benefits.b1_title", "Title", T, "Your property holds its value"),
+                ("benefits.b1_short", "Short version for the homepage", T,
+                 "Buyers judge your home from the street. Neat verges and pavements attract more buyers and better offers."),
+                ("benefits.b1_text", "Text (leave a blank line between paragraphs)", A,
+                 "Buyers make up their minds about a home before they reach the front door. If the street outside is "
+                 "littered, overgrown or falling apart, many move on, and the ones who stay ask for a bigger discount.\n\n"
+                 "South African property groups point out that well-kept neighbourhoods attract more buyers and achieve "
+                 "better selling prices than neglected ones. One run-down stretch can make every house on the street "
+                 "harder to sell, so keeping verges and pavements neat protects everyone’s investment, not just your own."),
+                ("benefits.b1_stat", "Highlight (optional, e.g. a number)", T, ""),
+                ("benefits.b1_stat_label", "Highlight label", T, ""),
+                ("benefits.b1_source", "Source name (optional)", T, "Private Property, citing the Seeff Property Group (June 2026)"),
+                ("benefits.b1_source_url", "Source link (optional)", T,
+                 "https://www.privateproperty.co.za/advice/property/articles/the-state-of-your-neighbourhood-impacts-your-property-value-and-selling-price/9695"),
+                ("benefits.b1_image", "Picture", IMG, "static:img/gallery/aerial-crew.jpg"),
+            ]),
+            ("Benefit 2: wellbeing", [
+                ("benefits.b2_title", "Title", T, "You feel better living there"),
+                ("benefits.b2_short", "Short version for the homepage", T,
+                 "Clean, cared-for streets are calmer places to walk, play and meet the neighbours."),
+                ("benefits.b2_text", "Text (leave a blank line between paragraphs)", A,
+                 "Neglect wears people down. Rubbish, weeds and broken pavements are a daily reminder that nobody is "
+                 "looking after the place you live. A clean street does the opposite: people walk more, children play "
+                 "outside, and neighbours stop to talk.\n\n"
+                 "Research backs this up. When researchers at the University of Pennsylvania cleared and greened "
+                 "neglected plots in Philadelphia, people living nearby reported feeling depressed far less often than "
+                 "residents near plots that were left alone."),
+                ("benefits.b2_stat", "Highlight (optional, e.g. a number)", T, "41.5%"),
+                ("benefits.b2_stat_label", "Highlight label", T, "fewer feelings of depression among neighbours of cleaned-up, greened plots"),
+                ("benefits.b2_source", "Source name (optional)", T, "University of Pennsylvania, JAMA Network Open (2018)"),
+                ("benefits.b2_source_url", "Source link (optional)", T,
+                 "https://penntoday.upenn.edu/news/greening-vacant-lots-reduces-depression-city-dwellers"),
+                ("benefits.b2_image", "Picture", IMG, "static:img/gallery/crew-pavement.jpg"),
+            ]),
+            ("Benefit 3: safety", [
+                ("benefits.b3_title", "Title", T, "Your street is safer"),
+                ("benefits.b3_short", "Short version for the homepage", T,
+                 "No hiding spots, no trip hazards, no flooded roads. A cared-for street tells everyone people are watching."),
+                ("benefits.b3_text", "Text (leave a blank line between paragraphs)", A,
+                 "Visible neglect sends a message that nobody is paying attention, and that tends to invite more of the "
+                 "same, from dumping to crime. A tidy, cared-for street sends the opposite message.\n\n"
+                 "There are practical wins too. Cutting back overgrown verges removes hiding places and opens up sight "
+                 "lines for drivers and people on foot. Clear pavements mean nobody has to walk in the road, and clear "
+                 "storm-water drains stop the flooding that damages roads and cars."),
+                ("benefits.b3_stat", "Highlight (optional, e.g. a number)", T, "Up to 29%"),
+                ("benefits.b3_stat_label", "Highlight label", T, "less gun violence near cleaned-up plots in the same Philadelphia research"),
+                ("benefits.b3_source", "Source name (optional)", T, "University of Pennsylvania (2018)"),
+                ("benefits.b3_source_url", "Source link (optional)", T,
+                 "https://penntoday.upenn.edu/news/greening-vacant-lots-reduces-depression-city-dwellers"),
+                ("benefits.b3_image", "Picture", IMG, "static:img/gallery/brushcutter.jpg"),
+            ]),
+            ("On the homepage", [
+                ("benefits.home_heading", "Heading (leave empty to hide the homepage section)", T, "Why a clean street pays off"),
+                ("benefits.home_link", "Link text", T, "Why it matters"),
+            ]),
+            ("Bottom of the page", [
+                ("benefits.cta_heading", "Heading", T, "Start with your own street"),
+                ("benefits.cta_text", "Text", A,
+                 "Ask for a free quote, share the funding link with your neighbours, and our crew does the rest. "
+                 "If the goal isn’t reached, everyone is refunded."),
+                ("benefits.cta_button", "Button", T, "Request a clean"),
+            ]),
+        ],
+    },
     "sponsors": {
         "label": "Sponsors page",
         "endpoint": "public.sponsors",

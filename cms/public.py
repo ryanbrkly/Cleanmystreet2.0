@@ -133,6 +133,11 @@ def how_it_works():
     return render_template("pages/how_it_works.html")
 
 
+@bp.route("/why-clean-streets")
+def benefits():
+    return render_template("pages/benefits.html")
+
+
 @bp.route("/about")
 def about():
     try:
@@ -465,7 +470,7 @@ def robots():
 @bp.route("/sitemap.xml")
 def sitemap():
     base = current_app.config["PUBLIC_BASE_URL"] or request.host_url.rstrip("/")
-    paths = ["/", "/projects", "/how-it-works", "/about", "/request", "/sponsors", "/privacy", "/terms"]
+    paths = ["/", "/projects", "/how-it-works", "/why-clean-streets", "/about", "/request", "/sponsors", "/privacy", "/terms"]
     paths += [f"/sponsors/{r['slug']}" for r in query("SELECT slug FROM sponsors WHERE active=1 AND slug IS NOT NULL")]
     paths += [f"/projects/{r['slug']}" for r in query(
         "SELECT slug FROM projects WHERE status NOT IN ('cancelled')")]

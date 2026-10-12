@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=7">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=8">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -36,8 +36,10 @@
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="nav" id="site-nav" aria-label="Main">
       {% set ep = request.endpoint or '' %}
+      <a href="{{ url_for('public.home') }}"{% if ep == 'public.home' %} aria-current="page"{% endif %}>Home</a>
       <a href="{{ url_for('public.projects') }}"{% if ep in ('public.projects','public.project') %} aria-current="page"{% endif %}>Projects</a>
       <a href="{{ url_for('public.how_it_works') }}"{% if ep == 'public.how_it_works' %} aria-current="page"{% endif %}>How it works</a>
+      <a href="{{ url_for('public.benefits') }}"{% if ep == 'public.benefits' %} aria-current="page"{% endif %}>Why it matters</a>
       <a href="{{ url_for('public.about') }}"{% if ep == 'public.about' %} aria-current="page"{% endif %}>About</a>
       <a href="{{ url_for('public.sponsors') }}"{% if ep == 'public.sponsors' %} aria-current="page"{% endif %}>Sponsors</a>
       <a class="btn btn--primary btn--sm" href="{{ url_for('public.request_clean') }}">Request a clean</a>
@@ -71,6 +73,7 @@
       <h4>Learn more</h4>
       <ul>
         <li><a href="{{ url_for('public.how_it_works') }}">How it works</a></li>
+        <li><a href="{{ url_for('public.benefits') }}">Why clean streets matter</a></li>
         <li><a href="{{ url_for('public.how_it_works') }}#refunds">Refund guarantee</a></li>
         <li><a href="{{ url_for('public.about') }}">About us</a></li>
       </ul>
@@ -99,7 +102,7 @@
   <figure><img src="" alt=""><p></p><p class="lightbox__count" aria-live="polite"></p></figure>
   <button class="lightbox__nav lightbox__next" type="button" data-step="1" aria-label="Next photo" hidden>&#8250;</button>
 </div>
-<script src="{{ url_for('static', filename='js/site.js') }}?v=7" defer></script>
+<script src="{{ url_for('static', filename='js/site.js') }}?v=8" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

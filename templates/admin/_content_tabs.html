@@ -2,5 +2,6 @@
   <a href="{{ url_for('admin.page_content', page='about') }}"{% if request.endpoint == 'admin.page_content' and request.view_args.page == 'about' %} aria-current="page"{% endif %}>About wording</a>
   <a href="{{ url_for('admin.about_layout') }}"{% if request.endpoint in ('admin.about_layout', 'admin.about_block') %} aria-current="page"{% endif %}>About blocks</a>
   <a href="{{ url_for('admin.story') }}"{% if request.endpoint == 'admin.story' %} aria-current="page"{% endif %}>About photo story</a>
+  <a href="{{ url_for('admin.page_content', page='benefits') }}"{% if request.endpoint == 'admin.page_content' and request.view_args.page == 'benefits' %} aria-current="page"{% endif %}>Why it matters page</a>
   <a href="{{ url_for('admin.page_content', page='sponsors') }}"{% if request.endpoint == 'admin.page_content' and request.view_args.page == 'sponsors' %} aria-current="page"{% endif %}>Sponsors page</a>
 </nav>

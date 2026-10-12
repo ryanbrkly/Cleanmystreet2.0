@@ -108,7 +108,11 @@ def how_it_works():
 
 @bp.route("/about")
 def about():
-    return render_template("pages/about.html", stats=public_stats())
+    try:
+        story = query("SELECT * FROM story_photos ORDER BY sort_order, id")
+    except Exception:  # noqa: BLE001 - table appears after the next start
+        story = []
+    return render_template("pages/about.html", stats=public_stats(), story=story)
 
 
 @bp.route("/sponsors")

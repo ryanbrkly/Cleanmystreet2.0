@@ -223,11 +223,37 @@ def migrate():
                 for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
         if column not in cols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+    seed_story(conn)
     # give every sponsor a web address for its page
     from .utils import slugify
     for row in conn.execute("SELECT id, name FROM sponsors WHERE slug IS NULL OR slug = ''").fetchall():
         conn.execute("UPDATE sponsors SET slug=? WHERE id=?", (unique_sponsor_slug(slugify(row["name"]), row["id"]), row["id"]))
     conn.commit()
+
+
+DEFAULT_STORY = [
+    ("crew-site", "Safety first. Cones and signs go up before any work starts."),
+    ("brushcutter", "Overgrown verges are brush-cut right back to the kerb."),
+    ("crew-pavement", "Weeds are lifted out of the paving by hand, roots and all."),
+    ("drain-before", "Blocked storm-water drains are why streets flood when it rains."),
+    ("drain-clearing", "So the crew digs out the silt until the water can run away again."),
+    ("kerb-repair", "Broken kerbs and edges are dug out and reset."),
+    ("crew-slab", "Rubble and broken slabs are carried off site, not left on the verge."),
+    ("power-brush-sweep", "Power brushes lift the sand that builds up along the road edge."),
+    ("island-rebuild", "Bigger jobs, like rebuilding a traffic island, get the machinery they need."),
+    ("aerial-sweeper", "A final sweep, and the street is handed back clean."),
+]
+
+
+def seed_story(conn):
+    """Fill the About page photo story once, so admins start from a working example."""
+    done = conn.execute("SELECT value FROM settings WHERE key='story_seeded'").fetchall()
+    if done:
+        return
+    for i, (name, caption) in enumerate(DEFAULT_STORY):
+        conn.execute("INSERT INTO story_photos(image, caption, sort_order) VALUES (?,?,?)",
+                     (f"static:img/gallery/{name}.jpg", caption, i))
+    conn.execute("INSERT OR REPLACE INTO settings(key, value) VALUES ('story_seeded', '1')")
 
 
 def unique_sponsor_slug(base, sponsor_id=None):

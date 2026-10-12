@@ -192,3 +192,13 @@ CREATE TABLE IF NOT EXISTS email_log (
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_email_log_ref ON email_log(ref_type, ref_id)
+;
+
+-- "How a street gets done" photo story on the About page, in display order.
+CREATE TABLE IF NOT EXISTS story_photos (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    image       TEXT NOT NULL,              -- upload name, or "static:img/…" for built-in photos
+    caption     TEXT NOT NULL DEFAULT '',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+)

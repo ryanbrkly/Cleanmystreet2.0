@@ -743,3 +743,93 @@ def email_preview(key):
                                                "style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox")
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+# ---------------------------------------------------------------- About page photo story
+
+
+def _story_rows():
+    return query("SELECT * FROM story_photos ORDER BY sort_order, id")
+
+
+def _renumber(ids):
+    for i, sid in enumerate(ids):
+        execute("UPDATE story_photos SET sort_order=? WHERE id=?", (i, sid))
+
+
+@bp.route("/story", methods=["GET", "POST"])
+@login_required
+def story():
+    if request.method == "POST":
+        f = request.form
+        rows = _story_rows()
+        action = f.get("action", "save")
+
+        if action == "upload":
+            files = [fs for fs in request.files.getlist("photos") if fs and fs.filename][:30]
+            if not files:
+                flash("Choose at least one photo.", "error")
+                return redirect(url_for("admin.story"))
+            caption = clean_text(f.get("caption"), 240)
+            where = f.get("where", "end")
+            new_ids = []
+            for fs in files:
+                try:
+                    name = save_image(fs, prefix="story")
+                except ValueError as exc:
+                    flash(f"{fs.filename}: {exc}", "error")
+                    continue
+                new_ids.append(execute("INSERT INTO story_photos(image, caption, sort_order) VALUES (?,?,?)",
+                                       (name, caption if len(files) == 1 else "", 10_000 + len(new_ids))))
+            old = [r["id"] for r in rows]
+            if where == "start":
+                order = new_ids + old
+            elif where.isdigit() and 1 <= int(where) <= len(old) + 1:
+                pos = int(where) - 1
+                order = old[:pos] + new_ids + old[pos:]
+            else:
+                order = old + new_ids
+            _renumber(order)
+            if new_ids:
+                log_activity("story_photos_added", str(len(new_ids)))
+                flash(f"{len(new_ids)} photo{'s' if len(new_ids) != 1 else ''} added. Write a short note under each one and save.",
+                      "success")
+            return redirect(url_for("admin.story") + "#photos")
+
+        if action == "delete":
+            row = query("SELECT * FROM story_photos WHERE id=?", (f.get("photo_id"),), one=True)
+            if row:
+                if not row["image"].startswith("static:"):
+                    delete_upload(row["image"])
+                execute("DELETE FROM story_photos WHERE id=?", (row["id"],))
+                _renumber([r["id"] for r in _story_rows()])
+                log_activity("story_photo_deleted", str(row["id"]))
+                flash("Photo removed from the story.", "success")
+            return redirect(url_for("admin.story") + "#photos")
+
+        # save notes and order (also used by the move buttons)
+        keyed = []
+        for i, r in enumerate(rows):
+            execute("UPDATE story_photos SET caption=? WHERE id=?",
+                    (clean_text(f.get(f"caption_{r['id']}", r["caption"]), 240), r["id"]))
+            try:
+                pos = float(f.get(f"pos_{r['id']}") or i + 1)
+            except ValueError:
+                pos = i + 1
+            keyed.append([pos, i, r["id"]])
+        keyed.sort()
+        order = [k[2] for k in keyed]
+        move = f.get("move", "")
+        if ":" in move:
+            how, _, sid = move.partition(":")
+            sid = int(sid) if sid.isdigit() else -1
+            if sid in order:
+                i = order.index(sid)
+                order.pop(i)
+                j = {"up": max(0, i - 1), "down": min(len(order), i + 1), "top": 0}.get(how, len(order))
+                order.insert(j, sid)
+        _renumber(order)
+        log_activity("story_saved", f"{len(order)} photos")
+        flash("Story saved.", "success")
+        return redirect(url_for("admin.story") + "#photos")
+    return render_template("admin/story.html", rows=_story_rows())

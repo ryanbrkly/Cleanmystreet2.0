@@ -251,3 +251,18 @@ def valid_email(text):
 def initials(name):
     parts = [p for p in re.split(r"\s+", name or "") if p and p[0] in string.ascii_letters]
     return "".join(p[0].upper() for p in parts[:2]) or "★"
+
+
+def photo_url(image, small=False):
+    """URL for a story/gallery photo: either a built-in static file ("static:img/…") or an upload."""
+    from flask import current_app, url_for
+    image = str(image or "")
+    if image.startswith("static:"):
+        path = image[len("static:"):]
+        if small:
+            root, dot, ext = path.rpartition(".")
+            alt = f"{root}-sm.{ext}"
+            if os.path.exists(os.path.join(current_app.static_folder, alt)):
+                path = alt
+        return url_for("static", filename=path)
+    return url_for("static", filename=f"uploads/{image}")

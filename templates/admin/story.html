@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% set title = 'About page story' %}
+{% block main %}
+<div class="admin-top">
+  <div><h1>About page photo story</h1><p class="muted" style="margin:4px 0 0">Photos shown in order on the About page under “How a street gets done”, each with a short note underneath. Visitors can tap any photo to see it full size.</p></div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story" target="_blank">View on the website</a>
+</div>
+
+<section class="acard">
+  <h2>Add photos</h2>
+  <form method="post" enctype="multipart/form-data" class="story-upload">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="upload">
+    <div class="field"><label for="sp">Photos</label><input id="sp" type="file" name="photos" accept="image/*" multiple required><div class="hint">Choose one or several (up to 30). Several photos are added in file-name order. You can reorder them below.</div></div>
+    <div class="field"><label for="sc">Note under the photo <span class="muted small">(one photo only)</span></label><input id="sc" type="text" name="caption" maxlength="240" placeholder="e.g. Drains cleared and the water runs again"></div>
+    <div class="field"><label for="sw">Put them</label>
+      <select id="sw" name="where">
+        <option value="end">At the end</option>
+        <option value="start">At the start</option>
+        {% for r in rows[1:] %}<option value="{{ loop.index + 1 }}">Before photo {{ loop.index + 1 }}</option>{% endfor %}
+      </select></div>
+    <div><button class="btn btn--primary" type="submit">Upload</button></div>
+  </form>
+</section>
+
+<section class="acard" id="photos">
+  <h2>The story <span class="small muted">{{ rows|length }} photo{{ '' if rows|length == 1 else 's' }}</span></h2>
+  {% if rows %}
+  <form method="post" id="story-form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save">
+    <ol class="story-admin">
+      {% for r in rows %}
+      <li>
+        <span class="story-admin__num">{{ loop.index }}</span>
+        <img src="{{ r.image|photo_url(True) }}" alt="" loading="lazy">
+        <div class="story-admin__body">
+          <label class="visually-hidden" for="c{{ r.id }}">Note under photo {{ loop.index }}</label>
+          <textarea id="c{{ r.id }}" name="caption_{{ r.id }}" rows="2" maxlength="240" placeholder="Write a short note for this photo">{{ r.caption }}</textarea>
+          <div class="story-admin__tools">
+            <label class="small">Position <input type="number" name="pos_{{ r.id }}" value="{{ loop.index }}" min="1" max="{{ rows|length }}" class="pos"></label>
+            <button class="btn btn--ghost btn--sm" name="move" value="up:{{ r.id }}" type="submit"{% if loop.first %} disabled{% endif %} aria-label="Move photo {{ loop.index }} up">↑ Up</button>
+            <button class="btn btn--ghost btn--sm" name="move" value="down:{{ r.id }}" type="submit"{% if loop.last %} disabled{% endif %} aria-label="Move photo {{ loop.index }} down">↓ Down</button>
+            <button class="link-btn small danger" type="submit" form="del-{{ r.id }}">Remove</button>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    <div class="story-save"><button class="btn btn--primary" type="submit">Save notes and order</button><span class="tiny muted">To jump a photo to a new place, change its position number and save.</span></div>
+  </form>
+  {% for r in rows %}
+  <form method="post" id="del-{{ r.id }}" data-confirm="Remove photo {{ loop.index }} from the story?" hidden><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="photo_id" value="{{ r.id }}"></form>
+  {% endfor %}
+  {% else %}
+  <p class="muted" style="margin:0">No photos yet. The About page hides this section until you add some.</p>
+  {% endif %}
+</section>
+{% endblock %}

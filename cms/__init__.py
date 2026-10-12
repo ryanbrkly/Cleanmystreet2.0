@@ -139,6 +139,7 @@ def create_app(test_config=None):
         nice_date=utils.nice_date,
         nice_datetime=utils.nice_datetime,
         initials=utils.initials,
+        photo_url=utils.photo_url,
     )
 
     @app.context_processor

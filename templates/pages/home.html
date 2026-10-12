@@ -14,6 +14,7 @@
       <div class="hero__ctas">
         <a class="btn btn--primary" href="{{ url_for('public.request_clean') }}">Request a clean for your street</a>
         <a class="btn btn--ghost" href="{{ url_for('public.projects') }}">Back a street near you</a>
+        <a class="btn btn--link" href="{{ url_for('public.about') }}">About us</a>
       </div>
       <ul class="promises">
         <li>{{ icon('shield', 18) }} Full refund if the goal isn’t reached</li>
@@ -92,7 +93,10 @@
       </li>
       {% endfor %}
     </ul>
-    <p class="filmstrip__hint">Tap any photo to see it full size.</p>
+    <div class="filmstrip__foot">
+      <p class="filmstrip__hint">Tap any photo to see it full size.</p>
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story">See how a street gets done</a>
+    </div>
   </div>
 </section>
 

@@ -1087,3 +1087,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--royal); box-shad
 .benefit-card__stat b { font-family: var(--display); font-size: 1.3rem; color: var(--ink); }
 @media (max-width: 860px) { .benefit-cards { grid-template-columns: 1fr; } }
 @media (min-width: 901px) and (max-width: 1100px) { .nav a { padding: 9px 10px; font-size: .95rem; } }
+
+/* Menu 20% smaller; the "Request a clean" button stays as it was */
+.nav { gap: 2px; }
+.nav a:not(.btn) { font-size: .8rem; padding: 7px 11px; }
+.nav .btn--primary.btn--sm { font-size: .9rem; padding: 10px 18px; }
+@media (min-width: 901px) and (max-width: 1100px) { .nav a:not(.btn) { font-size: .78rem; padding: 7px 8px; } }
+@media (max-width: 900px) { .nav a:not(.btn) { font-size: .9rem; padding: 12px 8px; } }

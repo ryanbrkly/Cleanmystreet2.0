@@ -37,6 +37,33 @@ def _csrf_guard():
         check_csrf()
 
 
+_last_sweep = {"t": 0.0}
+
+
+@bp.after_app_request
+def _daily_sweep(resp):
+    """Without a cron job, close expired projects, refund and send deadline reminders about once an hour.
+
+    Runs after a normal page view (never for static files or admin), at most every 10 minutes per
+    server instance and once an hour across all instances.
+    """
+    import time
+    now = time.time()
+    if (now - _last_sweep["t"] < 600 or request.method != "GET" or resp.status_code != 200
+            or (request.endpoint or "").startswith(("static", "admin.", "uploaded")) or current_app.testing):
+        return resp
+    _last_sweep["t"] = now
+    try:
+        last = float(get_settings().get("last_sweep") or 0)
+        if now - last >= 3600:
+            execute("INSERT INTO settings(key, value) VALUES ('last_sweep', ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (str(now),))
+            process_expired_projects()
+    except Exception:  # noqa: BLE001 - never break a page view
+        current_app.logger.exception("Background sweep failed")
+    return resp
+
+
 # ---------------------------------------------------------------- pages
 
 
@@ -248,7 +275,7 @@ def track(token):
             fresh = query("SELECT * FROM requests WHERE id=?", (req["id"],), one=True)
             ctx = request_context(fresh)
             notify.send(fresh["email"], "request_updated", "request", fresh["id"], **ctx)
-            notify.notify_admins("admin_new_request", "request", fresh["id"],
+            notify.notify_admins("admin_new_request", "request", fresh["id"], is_update=True,
                                  **dict(ctx, admin_url=abs_url("admin.request_detail", rid=fresh["id"])))
             flash("Thanks — your updated request has been sent back to our team.", "success")
             return redirect(url_for("public.track", token=token))
@@ -408,7 +435,11 @@ def yoco_webhook():
 def cron_expire():
     """Call daily from an external cron: /tasks/process-expired?key=CRON_SECRET"""
     secret = current_app.config["CRON_SECRET"]
-    if not secret or not secrets.compare_digest(request.args.get("key", ""), secret):
+    given = request.args.get("key", "")
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):  # Vercel Cron sends the CRON_SECRET this way
+        given = given or auth[7:]
+    if not secret or not secrets.compare_digest(given, secret):
         abort(404)
     results = process_expired_projects()
     return {"processed": [{"project": t, "outcome": o} for t, o in results]}

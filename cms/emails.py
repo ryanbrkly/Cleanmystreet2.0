@@ -257,9 +257,10 @@ TEMPLATES = {
     # ---- team
     "admin_new_request": dict(
         group="Team", label="New request (team alert)", when="A new request arrives or a requester sends changes.",
-        vars=REQUEST_VARS + [("admin_url", "Link to the request in admin"), ("description", "What needs doing")],
-        subject="New cleaning request {{ ref }}: {{ street }}",
-        html=f"""<h1 {H1}>Request {{{{ ref }}}}: {{{{ street }}}}</h1>
+        vars=REQUEST_VARS + [("admin_url", "Link to the request in admin"), ("description", "What needs doing"),
+                             ("is_update", "True when the requester sent changes")],
+        subject="{% if is_update %}Changes received for{% else %}New cleaning request{% endif %} {{ ref }}: {{ street }}",
+        html=f"""<h1 {H1}>{{% if is_update %}}Updated request{{% else %}}New request{{% endif %}} {{{{ ref }}}}: {{{{ street }}}}</h1>
 <p {P}>{{{{ full_name }}}} · {{{{ location }}}}</p>
 <div {BOX}><p style="margin:0;white-space:pre-line">{{{{ description }}}}</p></div>
 {{{{ button(admin_url, "Review in admin") }}}}"""),

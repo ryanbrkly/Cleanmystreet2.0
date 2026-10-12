@@ -254,3 +254,27 @@ class EmailTests(Base):
     def test_emails_need_login(self):
         for path in ("/admin/emails", "/admin/emails/layout", "/admin/emails/layout/preview"):
             self.assertEqual(self.client.get(path).status_code, 302, path)
+
+
+class SweepTests(Base):
+    def test_page_views_run_the_hourly_sweep_without_cron(self):
+        from cms import public
+        from cms.db import execute as ex
+        self.submit_request()
+        p, token = self.approve(goal="5000")
+        with self.app.app_context():
+            ex("UPDATE projects SET deadline='2020-01-01' WHERE id=?", (p["id"],))
+        self.app.testing = False
+        public._last_sweep["t"] = 0
+        try:
+            self.assertEqual(self.client.get("/").status_code, 200)
+        finally:
+            self.app.testing = True
+        with self.app.app_context():
+            self.assertEqual(query("SELECT status FROM projects WHERE id=?", (p["id"],), one=True)["status"], "failed")
+            self.assertTrue(float(query("SELECT value FROM settings WHERE key='last_sweep'", one=True)["value"]) > 0)
+
+    def test_vercel_cron_header(self):
+        self.assertEqual(self.client.get("/tasks/process-expired").status_code, 404)
+        self.assertEqual(self.client.get("/tasks/process-expired", headers={"Authorization": "Bearer nope"}).status_code, 404)
+        self.assertEqual(self.client.get("/tasks/process-expired", headers={"Authorization": "Bearer cron123"}).status_code, 200)

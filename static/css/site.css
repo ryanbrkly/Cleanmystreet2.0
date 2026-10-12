@@ -849,3 +849,12 @@ textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, mo
 .storyline__nav:disabled { opacity: .3; cursor: default; }
 @media (max-width: 560px) { .storyline__step { flex-basis: 78vw; padding-right: 18px; } .storyline__buttons { display: none; } }
 @media (prefers-reduced-motion: reduce) { .storyline__track { scroll-behavior: auto; } }
+/* admin: payments */
+.pay-card { margin-top: 24px; }
+.pay-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 900px) { .pay-grid { grid-template-columns: 1fr; } }
+.pay-side { background: var(--paving); border-radius: var(--r-sm); padding: 16px 18px; align-self: start; }
+.pay-side h3 { margin: 0 0 10px; font-size: 1rem; }
+.pay-url { display: block; word-break: break-all; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: .85rem; }
+.pay-forget { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.pay-forget input { flex: 1 1 160px; padding: 6px 10px; }

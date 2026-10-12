@@ -614,6 +614,9 @@ def settings_page():
         if video and not youtube_id(video):
             flash("The homepage video must be a YouTube link.", "error")
             return redirect(url_for("admin.settings_page"))
+        if f.get("action", "").startswith("payments_"):
+            _payment_settings(f)
+            return redirect(url_for("admin.settings_page") + "#payments")
         if f.get("action") == "remove_samples":
             n = remove_sample_data()
             log_activity("sample_data_removed", str(n))
@@ -638,9 +641,84 @@ def settings_page():
         flash("Settings saved.", "success")
         return redirect(url_for("admin.settings_page"))
     from .services import live_stats, public_stats
+    from . import payments as pay
+    pc = pay.config()
     return render_template("admin/settings.html", s=get_settings(), live=live_stats(), shown=public_stats(),
+                           pay=pc, key_mask=pay.mask(pc["secret_key"]), hook_mask=pay.mask(pc["webhook_secret"]),
+                           webhook_url=url_for("public.yoco_webhook", _external=True),
                            samples=count_sample_data(),
                            video_id=youtube_id(get_settings().get("hero_video_url")))
+
+
+def _payment_settings(f):
+    """Save, check or remove the Yoco keys from Site settings. Changing keys needs the admin's password."""
+    from . import payments as pay
+    action = f["action"]
+    if action == "payments_check":
+        ok, msg = pay.check_keys()
+        flash(msg, "success" if ok else "error")
+        return
+    if action in ("payments_save", "payments_forget", "payments_webhook"):
+        if not check_password_hash(g.admin["password_hash"], f.get("confirm_password", "")):
+            flash("Enter your admin password to change payment settings.", "error")
+            return
+    if action == "payments_forget":
+        for key in ("yoco_secret_key", "yoco_webhook_secret", "payment_mode_override"):
+            set_setting(key, "")
+        log_activity("payment_keys_removed")
+        flash("Saved Yoco keys removed. The site now uses the keys in your hosting settings, if any.", "success")
+        return
+    if action == "payments_webhook":
+        if not pay.config()["secret_key"]:
+            flash("Save your Yoco secret key first.", "error")
+            return
+        try:
+            data = pay.register_webhook(url_for("public.yoco_webhook", _external=True))
+        except pay.PaymentError as exc:
+            flash(f"Yoco didn’t set up the webhook: {exc}", "error")
+            return
+        secret = (data or {}).get("secret", "")
+        if not secret.startswith("whsec_"):
+            flash("Yoco set up the webhook but didn’t return a signing secret. Copy it from the Yoco portal.", "error")
+            return
+        set_setting("yoco_webhook_secret", pay.encrypt(secret))
+        pay.forget_config()
+        log_activity("payment_webhook_registered")
+        flash("Webhook set up with Yoco and its signing secret saved.", "success")
+        return
+    # payments_save
+    secret = "".join((f.get("yoco_secret_key") or "").split())
+    hook = "".join((f.get("yoco_webhook_secret") or "").split())
+    if secret and not secret.startswith(("sk_live_", "sk_test_")):
+        flash("The secret key should start with sk_live_ (real payments) or sk_test_ (testing). "
+              "Don’t use the public key (pk_…).", "error")
+        return
+    if hook and not hook.startswith("whsec_"):
+        flash("The webhook signing secret should start with whsec_.", "error")
+        return
+    try:
+        if secret:
+            set_setting("yoco_secret_key", pay.encrypt(secret))
+        if hook:
+            set_setting("yoco_webhook_secret", pay.encrypt(hook))
+    except pay.PaymentError as exc:
+        flash(str(exc), "error")
+        return
+    pay.forget_config()
+    wanted = f.get("payment_mode")
+    if wanted == "yoco" and not pay.config()["secret_key"]:
+        flash("Add a Yoco secret key before switching on real payments.", "error")
+        return
+    if wanted in ("demo", "yoco"):
+        set_setting("payment_mode_override", wanted)
+    pay.forget_config()
+    cfg = pay.config()
+    log_activity("payment_settings_saved", f"mode={cfg['mode']} live={cfg['live']}")
+    if cfg["mode"] == "yoco":
+        kind = "LIVE: real money" if cfg["live"] else "TEST: Yoco test cards only"
+        flash(f"Payment settings saved. Payments go through Yoco ({kind}).", "success")
+    else:
+        flash("Payment settings saved. The site is in demo mode, so no money moves.", "success")
 
 
 SAMPLE_EMAIL = "demo%@example.com"

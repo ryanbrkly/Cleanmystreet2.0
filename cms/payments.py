@@ -40,14 +40,96 @@ class PaymentError(Exception):
     pass
 
 
+# ---------------------------------------------------------------- settings
+# Keys can come from environment variables (PAYMENT_MODE, YOCO_SECRET_KEY, YOCO_WEBHOOK_SECRET) or be
+# saved by an admin in Site settings. Saved keys win, and are stored encrypted with SECRET_KEY.
+
+SECRET_FIELDS = ("yoco_secret_key", "yoco_webhook_secret")
+
+
+def _fernet():
+    try:
+        from cryptography.fernet import Fernet
+    except ImportError:  # pragma: no cover - listed in requirements.txt
+        return None
+    digest = hashlib.sha256(("cms-payments:" + current_app.config["SECRET_KEY"]).encode()).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+def encrypt(value):
+    f = _fernet()
+    if not f:
+        raise PaymentError("The server is missing the 'cryptography' package, so keys can't be stored safely.")
+    return "enc1:" + f.encrypt(value.encode()).decode()
+
+
+def decrypt(stored):
+    if not stored:
+        return ""
+    if not stored.startswith("enc1:"):
+        return ""
+    f = _fernet()
+    if not f:
+        return ""
+    try:
+        return f.decrypt(stored[5:].encode()).decode()
+    except Exception:  # noqa: BLE001 - SECRET_KEY changed, or tampered value
+        return ""
+
+
+def config():
+    """Effective payment settings for this request: {mode, secret_key, webhook_secret, source, ...}."""
+    from flask import g
+    if "payment_config" in g:
+        return g.payment_config
+    cfg = current_app.config
+    saved = {}
+    try:
+        from .db import get_settings
+        s = get_settings()
+        saved = {"mode": s.get("payment_mode_override", ""),
+                 "secret_key": decrypt(s.get("yoco_secret_key", "")),
+                 "webhook_secret": decrypt(s.get("yoco_webhook_secret", "")),
+                 "unreadable": bool(s.get("yoco_secret_key")) and not decrypt(s.get("yoco_secret_key", ""))}
+    except Exception:  # noqa: BLE001 - before the database exists
+        pass
+    secret = saved.get("secret_key") or cfg.get("YOCO_SECRET_KEY", "")
+    webhook = saved.get("webhook_secret") or cfg.get("YOCO_WEBHOOK_SECRET", "")
+    chosen = saved.get("mode") if saved.get("mode") in ("demo", "yoco") else cfg.get("PAYMENT_MODE", "demo")
+    result = {
+        "mode": chosen,
+        "secret_key": secret,
+        "webhook_secret": webhook,
+        "key_source": "admin" if saved.get("secret_key") else ("env" if cfg.get("YOCO_SECRET_KEY") else ""),
+        "webhook_source": "admin" if saved.get("webhook_secret") else ("env" if cfg.get("YOCO_WEBHOOK_SECRET") else ""),
+        "mode_source": "admin" if saved.get("mode") in ("demo", "yoco") else "env",
+        "live": secret.startswith("sk_live_"),
+        "unreadable": saved.get("unreadable", False),
+    }
+    g.payment_config = result
+    return result
+
+
+def forget_config():
+    from flask import g
+    g.pop("payment_config", None)
+
+
+def mask(value):
+    if not value:
+        return ""
+    head = value[:8] if value.startswith(("sk_", "whsec_")) else value[:3]
+    return f"{head}…{value[-4:]}"
+
+
 def mode():
-    return current_app.config["PAYMENT_MODE"]
+    return config()["mode"]
 
 
 def _headers(idempotency_key=None):
-    key = current_app.config["YOCO_SECRET_KEY"]
+    key = config()["secret_key"]
     if not key:
-        raise PaymentError("YOCO_SECRET_KEY is not configured.")
+        raise PaymentError("No Yoco secret key is set. Add it in Admin → Site settings → Payments.")
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     if idempotency_key:
         headers["Idempotency-Key"] = idempotency_key
@@ -133,11 +215,27 @@ def register_webhook(url, name="clean-my-street"):
     return _call("POST", "/webhooks", {"name": name, "url": url})
 
 
+def check_keys():
+    """Ask Yoco whether the secret key works, without moving money. Returns (ok, message)."""
+    try:
+        resp = requests.get(f"{API_BASE}/webhooks", headers=_headers(), timeout=15)
+    except PaymentError as exc:
+        return False, str(exc)
+    except requests.RequestException as exc:
+        return False, f"Couldn’t reach Yoco: {exc}"
+    if resp.status_code in (401, 403):
+        return False, "Yoco rejected the secret key. Copy it again from the Yoco portal (Sales → Payment gateway)."
+    if resp.status_code >= 400:
+        return False, f"Yoco answered with an error ({resp.status_code}). The key may still be fine; try a small payment."
+    kind = "live" if config()["live"] else "test"
+    return True, f"Yoco accepted the {kind} secret key."
+
+
 def verify_webhook(headers, raw_body):
     """Return True when the delivery is authentic and fresh."""
-    secret = current_app.config["YOCO_WEBHOOK_SECRET"]
+    secret = config()["webhook_secret"]
     if not secret:
-        current_app.logger.error("YOCO_WEBHOOK_SECRET not set; rejecting webhook.")
+        current_app.logger.error("Yoco webhook secret not set; rejecting webhook.")
         return False
     msg_id = headers.get("webhook-id", "")
     timestamp = headers.get("webhook-timestamp", "")

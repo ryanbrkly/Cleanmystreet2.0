@@ -62,6 +62,49 @@
 </div>
 <button class="btn btn--primary" type="submit">Save settings</button>
 </form>
+
+<section class="acard pay-card" id="payments">
+  <h2>Payments (Yoco) {% if pay.mode == 'yoco' and pay.live %}<span class="pill pill--paid">Live: real money</span>{% elif pay.mode == 'yoco' %}<span class="pill pill--monthly">Test keys</span>{% else %}<span class="pill pill--pending">Demo, no money moves</span>{% endif %}</h2>
+  {% if pay.unreadable %}<div class="flash flash--error">Saved keys can’t be read because SECRET_KEY changed. Enter them again below.</div>{% endif %}
+  <div class="pay-grid">
+    <form method="post" autocomplete="off">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payments_save">
+      <span class="label">Payments on the website</span>
+      <div class="radio-row">
+        <label class="check"><input type="radio" name="payment_mode" value="demo"{% if pay.mode != 'yoco' %} checked{% endif %}> <span><b>Demo</b><br><span class="tiny muted">Contributors see a pretend payment page. Nothing is charged.</span></span></label>
+        <label class="check"><input type="radio" name="payment_mode" value="yoco"{% if pay.mode == 'yoco' %} checked{% endif %}> <span><b>Yoco</b><br><span class="tiny muted">Card payments through Yoco. A live key takes real money, a test key only accepts Yoco’s test cards.</span></span></label>
+      </div>
+      <div class="field" style="margin-top:12px"><label for="ysk">Secret key</label>
+        <input id="ysk" type="password" name="yoco_secret_key" autocomplete="new-password" spellcheck="false" placeholder="{{ (key_mask ~ ' saved, leave empty to keep') if key_mask else 'sk_live_…' }}">
+        <div class="hint">{% if pay.key_source == 'admin' %}Saved here: {{ key_mask }}.{% elif pay.key_source == 'env' %}Currently using the key from your hosting settings ({{ key_mask }}). A key saved here takes over.{% else %}Not set.{% endif %} Find it in the Yoco portal under Sales → Payment gateway. Use the secret key, never the public pk_ key.</div></div>
+      <div class="field" style="margin-top:10px"><label for="ywh">Webhook signing secret</label>
+        <input id="ywh" type="password" name="yoco_webhook_secret" autocomplete="new-password" spellcheck="false" placeholder="{{ (hook_mask ~ ' saved, leave empty to keep') if hook_mask else 'whsec_…' }}">
+        <div class="hint">{% if pay.webhook_source == 'admin' %}Saved here: {{ hook_mask }}.{% elif pay.webhook_source == 'env' %}Using the one from your hosting settings ({{ hook_mask }}).{% else %}Not set. Use “Set up webhook for me” after saving the secret key.{% endif %}</div></div>
+      <div class="field" style="margin-top:10px"><label for="ypw">Your admin password</label>
+        <input id="ypw" type="password" name="confirm_password" autocomplete="current-password" required>
+        <div class="hint">Needed to change payment settings, so nobody else can redirect payments.</div></div>
+      <button class="btn btn--primary" type="submit" style="margin-top:12px" data-pay-save>Save payment settings</button>
+    </form>
+    <div class="pay-side">
+      <h3>Check and finish setup</h3>
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payments_check">
+        <button class="btn btn--ghost btn--sm" type="submit"{% if not pay.secret_key %} disabled{% endif %}>Check the key with Yoco</button></form>
+      <form method="post" class="pay-webhook" autocomplete="off"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payments_webhook">
+        <p class="small" style="margin:12px 0 6px">Yoco tells the site about each payment at this address:</p>
+        <code class="pay-url">{{ webhook_url }}</code>
+        <div class="field" style="margin-top:8px"><label class="visually-hidden" for="ypw2">Your admin password</label><input id="ypw2" type="password" name="confirm_password" placeholder="Your admin password" autocomplete="current-password" required></div>
+        <button class="btn btn--ghost btn--sm" type="submit" style="margin-top:8px"{% if not pay.secret_key %} disabled{% endif %}>Set up webhook for me</button>
+      </form>
+      {% if pay.key_source == 'admin' or pay.webhook_source == 'admin' or pay.mode_source == 'admin' %}
+      <form method="post" data-confirm="Remove the Yoco keys saved here?" class="pay-forget" autocomplete="off"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="payments_forget">
+        <input type="password" name="confirm_password" placeholder="Your admin password" autocomplete="current-password" required aria-label="Your admin password">
+        <button class="link-btn small danger" type="submit">Remove saved keys</button>
+      </form>
+      {% endif %}
+      <p class="tiny muted" style="margin-top:14px">Keys are stored encrypted and never shown in full again. Tip: switch to Yoco with a test key first, pay with a Yoco test card, then swap in the live key.</p>
+    </div>
+  </div>
+</section>
 <form method="post" id="remove-samples" data-confirm="Delete all sample requests, projects, payments and sponsors? Your real data stays." hidden>
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="remove_samples">
 </form>

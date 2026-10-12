@@ -3,3 +3,4 @@ requests>=2.31
 Pillow>=10.0
 python-dotenv>=1.0
 gunicorn>=22.0
+cryptography>=42

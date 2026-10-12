@@ -80,10 +80,7 @@ def create_app(test_config=None):
     if env == "production":
         if app.config["SECRET_KEY"] == "dev-only-change-me":
             config_errors.append("SECRET_KEY is not set.")
-        if app.config["PAYMENT_MODE"] == "demo":
-            config_errors.append("PAYMENT_MODE is 'demo'. Set PAYMENT_MODE=yoco and your Yoco keys.")
-        if app.config["PAYMENT_MODE"] == "yoco" and not app.config["YOCO_SECRET_KEY"]:
-            config_errors.append("YOCO_SECRET_KEY is not set.")
+        # Payment keys may be added later in Admin → Site settings, so they don't block the site.
     app.config["CONFIG_ERRORS"] = config_errors
     # Data in /tmp on a serverless host is lost on restart; admins see a warning until a database is connected.
     app.config["TEMP_STORAGE"] = serverless and not app.config["TURSO_DATABASE_URL"]
@@ -147,6 +144,13 @@ def create_app(test_config=None):
     )
     app.jinja_env.globals.update(c=content.get)
 
+    def _payment_mode():
+        try:
+            from .payments import mode
+            return mode()
+        except Exception:  # noqa: BLE001
+            return app.config.get("PAYMENT_MODE", "demo")
+
     @app.context_processor
     def inject_globals():
         from .services import PHASES
@@ -158,7 +162,7 @@ def create_app(test_config=None):
             "csrf_token": utils.csrf_token,
             "site": settings,
             "PHASES": PHASES,
-            "payment_mode": app.config["PAYMENT_MODE"],
+            "payment_mode": _payment_mode(),
             "base_url": app.config["PUBLIC_BASE_URL"] or request.host_url.rstrip("/"),
             "now_year": utils.today_sast().year,
             "temp_storage": app.config.get("TEMP_STORAGE"),

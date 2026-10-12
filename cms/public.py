@@ -351,7 +351,7 @@ def _contribution_by_token(token):
 
 @bp.route("/pay/demo/<token>", methods=["GET", "POST"])
 def pay_demo(token):
-    if current_app.config["PAYMENT_MODE"] != "demo":
+    if payments.mode() != "demo":
         abort(404)
     c = _contribution_by_token(token)
     p = project_view(query("SELECT * FROM projects WHERE id=?", (c["project_id"],), one=True))
@@ -369,7 +369,7 @@ def pay_demo(token):
 @bp.route("/pay/return/<token>")
 def pay_return(token):
     c = _contribution_by_token(token)
-    if c["status"] == "pending" and c["checkout_id"] and current_app.config["PAYMENT_MODE"] == "yoco":
+    if c["status"] == "pending" and c["checkout_id"] and payments.mode() == "yoco":
         try:
             checkout = payments.get_checkout(c["checkout_id"])
             if payments.checkout_is_paid(checkout):

@@ -214,6 +214,7 @@ MIGRATIONS = [
     ("sponsors", "phone", "TEXT NOT NULL DEFAULT ''"),
     ("sponsors", "address", "TEXT NOT NULL DEFAULT ''"),
     ("projects", "reminder_sent", "INTEGER NOT NULL DEFAULT 0"),
+    ("projects", "cover_position", "TEXT NOT NULL DEFAULT 'center'"),
 ]
 
 

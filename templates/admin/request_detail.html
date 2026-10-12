@@ -57,7 +57,7 @@
         <details open>
           <summary>Approve and publish funding page</summary>
           {% if not quote %}<p class="muted small">Save a quote first.</p>{% else %}
-          <form method="post">
+          <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="approve">
             <div class="field" style="margin-bottom:10px"><label for="t">Project title</label><input id="t" type="text" name="title" value="{{ req.street_name }}{% if req.suburb %}, {{ req.suburb }}{% endif %}"></div>
@@ -73,6 +73,7 @@
               <div class="field"><label for="minc">Minimum contribution (R)</label><input id="minc" type="text" inputmode="decimal" name="min_contribution" value="{{ (settings.default_min_contribution_cents|int / 100)|int }}"><div class="hint">Per household / street owner.</div></div>
               <div class="field"><label for="days">Funding deadline</label><select id="days" name="funding_days">{% for d in (7, 14, 21, 30, 45, 60) %}<option value="{{ d }}"{% if d == (settings.default_funding_days|int(21)) %} selected{% endif %}>{{ d }} days from today</option>{% endfor %}</select><div class="hint">Shown on the project page. If the goal isn’t met by then, everyone is refunded.</div></div>
             </div>
+            <div class="field" style="margin-top:12px"><label for="cvr">Project picture <span class="muted small">(optional)</span></label><input id="cvr" type="file" name="cover" accept="image/*"><div class="hint">{% if req.photo %}Leave empty to use the requester’s photo. {% endif %}You can change it later on the project page.</div></div>
             <button class="btn btn--primary btn--block" type="submit" style="margin-top:14px">Approve and publish</button>
             <p class="tiny muted" style="margin:8px 0 0">The requester is emailed the funding link.</p>
           </form>

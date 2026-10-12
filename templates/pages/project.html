@@ -9,7 +9,7 @@
 {# Title page: the cover photograph full width, then the project's title and progress #}
 {% if p.cover_image %}
 <div class="cover__photo cover__photo--project">
-  <img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="{{ p.street_name }}">
+  <img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="{{ p.street_name }}"{% if p.cover_position in ('top', 'bottom') %} style="object-position:50% {{ {'top':'0%','bottom':'100%'}.get(p.cover_position, '50%') }}"{% endif %}>
 </div>
 {% endif %}
 <section class="titlepage{% if not p.cover_image %} titlepage--plain{% endif %}">

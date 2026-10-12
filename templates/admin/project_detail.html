@@ -129,6 +129,52 @@
   </div>
 
   <div>
+    <section class="acard" id="picture">
+      <h2>Project picture</h2>
+      <p class="tiny muted" style="margin-top:-8px">Shown on the project page, on project cards across the site and when the link is shared on WhatsApp.</p>
+      <div class="cover-preview">
+        {% if p.cover_image %}
+        <img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="Current project picture" style="object-position:50% {{ {'top':'0%','bottom':'100%'}.get(p.cover_position, '50%') }}">
+        {% else %}
+        <img src="{{ url_for('static', filename='img/gallery/crew-site-sm.jpg') }}" alt="" class="is-default"><span class="cover-preview__note">Standard photo. Upload one for this street.</span>
+        {% endif %}
+      </div>
+      <form method="post" enctype="multipart/form-data" class="cover-upload">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="set_cover">
+        <label class="visually-hidden" for="cv">Upload a picture</label>
+        <input id="cv" type="file" name="cover" accept="image/*" required>
+        <button class="btn btn--primary btn--sm" type="submit">{{ 'Replace picture' if p.cover_image else 'Upload picture' }}</button>
+      </form>
+      {% if p.cover_image %}
+      <form method="post" class="cover-position">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="cover_position">
+        <span class="small">Keep in view:</span>
+        {% for key, label in [('top','Top'),('center','Middle'),('bottom','Bottom')] %}
+        <button class="chip{% if (p.cover_position or 'center') == key %} is-on{% endif %}" name="cover_position" value="{{ key }}" type="submit">{{ label }}</button>
+        {% endfor %}
+      </form>
+      {% endif %}
+      {% set choices = [] %}
+      {% if req and req.photo and req.photo != p.cover_image %}{% set _ = choices.append((req.photo, 'Photo from the request')) %}{% endif %}
+      {% for u in updates if u.image and u.image != p.cover_image %}{% set _ = choices.append((u.image, u.title or u.phase|capitalize)) %}{% endfor %}
+      {% if choices %}
+      <p class="small" style="margin:14px 0 6px"><b>Or use one of this project’s photos</b></p>
+      <div class="cover-choices">
+        {% for img, label in choices[:12] %}
+        <form method="post">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="use_photo"><input type="hidden" name="photo" value="{{ img }}">
+          <button type="submit" title="Use: {{ label }}"><img src="{{ url_for('static', filename='uploads/' ~ img) }}" alt="{{ label }}" loading="lazy"></button>
+        </form>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if p.cover_image %}
+      <form method="post" data-confirm="Remove this project’s picture and show the standard photo instead?" style="margin-top:12px">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="remove_cover">
+        <button class="link-btn small danger" type="submit">Remove picture</button>
+      </form>
+      {% endif %}
+    </section>
     <section class="acard">
       <h2>Budget and funding rules</h2>
       <form method="post" enctype="multipart/form-data">
@@ -145,7 +191,6 @@
         <div class="field" style="margin:12px 0 10px"><label for="su">Public summary</label><textarea id="su" name="summary" rows="3">{{ p.summary }}</textarea></div>
         <div class="field" style="margin-bottom:10px"><label for="sc">Scope of work</label><textarea id="sc" name="scope" rows="3">{{ p.scope }}</textarea></div>
         <div class="field" style="margin-bottom:10px"><label for="lt">Quote line items</label><textarea id="lt" name="line_items" rows="5">{{ items_text }}</textarea><div class="hint"><code>Description | amount</code> per line.</div></div>
-        <div class="field" style="margin-bottom:12px"><label for="cv">Cover photo</label>{% if p.cover_image %}<img src="{{ url_for('static', filename='uploads/' ~ p.cover_image) }}" alt="" style="border-radius:6px;margin-bottom:8px;max-height:140px">{% endif %}<input id="cv" type="file" name="cover" accept="image/*"></div>
         <button class="btn btn--primary btn--sm" type="submit">Save changes</button>
       </form>
     </section>

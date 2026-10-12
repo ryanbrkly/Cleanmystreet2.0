@@ -190,10 +190,17 @@ def request_detail(rid):
                 flash("The minimum contribution can't be larger than the funding goal.", "error")
                 return redirect(url_for("admin.request_detail", rid=rid))
             title = request.form.get("title", "").strip() or f"{req['street_name']}, {req['suburb'] or req['city']}"
+            cover = None
+            if request.files.get("cover") and request.files["cover"].filename:
+                try:
+                    cover = save_image(request.files["cover"], prefix="cover")
+                except ValueError as exc:
+                    flash(f"Project picture: {exc}", "error")
+                    return redirect(url_for("admin.request_detail", rid=rid))
             pid = create_project_from_request(
                 req, quote, service_type=service, goal_cents=goal, budget_cents=budget,
                 min_contribution_cents=min_c, funding_days=days, title=title,
-                summary=request.form.get("summary", "").strip() or req["description"])
+                summary=request.form.get("summary", "").strip() or req["description"], cover_image=cover)
             project = get_project(pid)
             notify.send(req["email"], "request_approved", "request", rid,
                         **dict(project_context(project), **request_context(req)))
@@ -268,6 +275,56 @@ def projects_list():
     return render_template("admin/projects.html", rows=rows, tab=tab)
 
 
+def _cover_in_use(name, project_id):
+    """True if a picture file is still used somewhere other than as this project's cover."""
+    if not name:
+        return False
+    return bool(query("SELECT 1 FROM requests WHERE photo=?", (name,), one=True)
+                or query("SELECT 1 FROM updates WHERE image=?", (name,), one=True)
+                or query("SELECT 1 FROM projects WHERE cover_image=? AND id<>?", (name, project_id), one=True))
+
+
+def _project_picture(p, action, f):
+    old = p["cover_image"]
+    if action == "set_cover":
+        fs = request.files.get("cover")
+        if not fs or not fs.filename:
+            flash("Choose a picture to upload.", "error")
+            return
+        try:
+            new = save_image(fs, prefix="cover")
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return
+        message = "New project picture saved."
+    elif action == "use_photo":
+        new = f.get("photo", "")
+        allowed = {r["image"] for r in query("SELECT image FROM updates WHERE project_id=? AND image IS NOT NULL",
+                                             (p["id"],))}
+        if p["request_id"]:
+            r = query("SELECT photo FROM requests WHERE id=?", (p["request_id"],), one=True)
+            if r and r["photo"]:
+                allowed.add(r["photo"])
+        if new not in allowed:
+            flash("That photo doesn’t belong to this project.", "error")
+            return
+        message = "Project picture changed."
+    elif action == "remove_cover":
+        new = None
+        message = "Project picture removed. The standard photo is shown instead."
+    else:
+        pos = f.get("cover_position")
+        if pos in ("top", "center", "bottom"):
+            execute("UPDATE projects SET cover_position=?, updated_at=? WHERE id=?", (pos, now_iso(), p["id"]))
+            flash("Picture position saved.", "success")
+        return
+    execute("UPDATE projects SET cover_image=?, updated_at=? WHERE id=?", (new, now_iso(), p["id"]))
+    if old and old != new and not _cover_in_use(old, p["id"]):
+        delete_upload(old)
+    log_activity("project_picture", f"{p['title']}: {action}")
+    flash(message, "success")
+
+
 def _notify_update(pid, form, image=None, video=None):
     """Email backers and the requester about a new update, if the admin ticked the box."""
     if not form.get("notify"):
@@ -314,6 +371,10 @@ def project_detail(pid):
                  f.get("deadline") or p["deadline"], f.get("scheduled_for") or None, cover, now_iso(), pid))
             log_activity("project_updated", p["title"])
             flash("Project details saved.", "success")
+
+        elif action in ("set_cover", "use_photo", "remove_cover", "cover_position"):
+            _project_picture(p, action, f)
+            return redirect(url_for("admin.project_detail", pid=pid) + "#picture")
 
         elif action == "set_status":
             new = f.get("status")
@@ -414,7 +475,7 @@ def project_detail(pid):
                 return redirect(url_for("admin.project_detail", pid=pid) + "#delete")
             for u in query("SELECT image FROM updates WHERE project_id=? AND image IS NOT NULL", (pid,)):
                 delete_upload(u["image"])
-            if p["cover_image"] and not query("SELECT 1 FROM requests WHERE photo=?", (p["cover_image"],), one=True):
+            if p["cover_image"] and not _cover_in_use(p["cover_image"], p["id"]):
                 delete_upload(p["cover_image"])
             execute("DELETE FROM updates WHERE project_id=?", (pid,))
             execute("DELETE FROM contributions WHERE project_id=?", (pid,))

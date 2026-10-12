@@ -15,12 +15,12 @@
   <meta property="og:url" content="{{ base_url }}{{ request.path }}">
   <meta property="og:image" content="{{ base_url }}{{ og_image if og_image is defined and og_image else url_for('static', filename='img/gallery/aerial-crew.jpg') }}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#1f2a5c">
+  <meta name="theme-color" content="#18214d">
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=5">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}?v=6">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -99,7 +99,7 @@
   <figure><img src="" alt=""><p></p><p class="lightbox__count" aria-live="polite"></p></figure>
   <button class="lightbox__nav lightbox__next" type="button" data-step="1" aria-label="Next photo" hidden>&#8250;</button>
 </div>
-<script src="{{ url_for('static', filename='js/site.js') }}?v=5" defer></script>
+<script src="{{ url_for('static', filename='js/site.js') }}?v=6" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

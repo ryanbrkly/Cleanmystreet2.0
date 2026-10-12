@@ -2,35 +2,35 @@
 {% from "partials/ui.html" import icon, tape, project_card, youtube, status_pill %}
 {% block main %}
 
-{# Cover: a full-bleed photograph with the title page laid over its lower edge #}
-<section class="cover">
-  <div class="cover__photo">
-    <img src="{{ url_for('static', filename='img/gallery/aerial-crew.jpg') }}" alt="A Clean My Street crew trimming verges and sweeping a pavement, seen from above" fetchpriority="high">
-  </div>
-  <div class="wrap cover__page">
-    <div class="cover__title">
+{# Hero: the promise on the left, the street being cleaned on the right #}
+<section class="hero2">
+  <div class="wrap hero2__grid">
+    <div class="hero2__text">
       <h1>Clean streets, funded by the people who live on them.</h1>
       <p class="lede">Ask for a quote for your street, share the funding link with your neighbours, and our trained crew does the rest. If the goal isn’t reached by the deadline, everyone gets their money back.</p>
       <div class="hero__ctas">
         <a class="btn btn--primary" href="{{ url_for('public.request_clean') }}">Request a clean for your street</a>
         <a class="btn btn--ghost" href="{{ url_for('public.projects') }}">Back a street near you</a>
-        <a class="btn btn--link" href="{{ url_for('public.about') }}">About us</a>
       </div>
       <ul class="promises">
         <li>{{ icon('shield', 18) }} Full refund if the goal isn’t reached</li>
         <li>{{ icon('lock', 18) }} Card payments secured by Yoco</li>
         <li>{{ icon('camera', 18) }} Before-and-after photos for every job</li>
       </ul>
+      <a class="hero2__about" href="{{ url_for('public.about') }}">About us</a>
     </div>
-    {% if featured %}{% set f = featured[0] %}
-    <a class="cover__live" href="{{ url_for('public.project', slug=f.slug) }}">
-      <span class="cover__live-label">Raising funds now</span>
-      <span class="album__title">{{ f.title }}</span>
-      <span class="album__where">{{ f.location }}</span>
-      {{ tape(f.pct) }}
-      <span class="album__nums"><span><b>{{ f.raised_cents|rand }}</b> of {{ f.goal_cents|rand }}</span><span>{{ f.backers }} neighbours</span></span>
-    </a>
-    {% endif %}
+    <div class="hero2__media">
+      <img src="{{ url_for('static', filename='img/gallery/aerial-crew.jpg') }}" alt="A Clean My Street crew trimming verges and sweeping a pavement, seen from above" fetchpriority="high">
+      {% if featured %}{% set f = featured[0] %}
+      <a class="hero2__live" href="{{ url_for('public.project', slug=f.slug) }}">
+        <span class="hero2__live-label">Raising funds now</span>
+        <span class="album__title">{{ f.title }}</span>
+        <span class="album__where">{{ f.location }}</span>
+        {{ tape(f.pct) }}
+        <span class="album__nums"><span><b>{{ f.raised_cents|rand }}</b> of {{ f.goal_cents|rand }}</span><span>{{ f.backers }} neighbours</span></span>
+      </a>
+      {% endif %}
+    </div>
   </div>
 </section>
 

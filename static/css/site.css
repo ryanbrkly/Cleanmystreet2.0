@@ -3,29 +3,31 @@
    progress and the project status bar. Everything else stays calm and civic. */
 
 :root {
-  --ink: #1f2a5c;          /* wordmark navy */
-  --ink-2: #3c4675;
-  --muted: #5d6585;
-  --royal: #0a3a9e;        /* logo ring */
-  --royal-hover: #082f80;
-  --sky: #1e7fd6;          /* logo drop */
-  --leaf: #6fa524;         /* logo dome, darkened for text contrast */
-  --leaf-bg: #eef6e2;
-  --hivis: #d6f43c;        /* vest fluorescent */
+  --ink: #18214d;          /* wordmark navy */
+  --ink-2: #39426b;
+  --muted: #5f6782;
+  --royal: #1f5be0;        /* signal blue: every action */
+  --royal-hover: #1748b8;
+  --sky: #2f8ae6;          /* logo drop: focus rings */
+  --leaf: #4e8a1e;         /* logo dome: success */
+  --leaf-bg: #eaf4df;
+  --hivis: #d9f24a;        /* vest fluorescent: progress only */
   --silver: #c9cfd6;
   --cone: #e8601c;         /* used only for urgency */
   --cone-bg: #fdeee5;
-  --paving: #f2f3f0;       /* concrete grey surface */
-  --line: #dfe2e8;
+  --paving: #f4f5f7;       /* kerb grey surface */
+  --line: #e4e7ec;
   --white: #ffffff;
   --danger: #b4232a;
   --danger-bg: #fbeaea;
   --ok: #2e7d32;
 
-  --font: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 16px;
+  --font: "Instrument Sans", "Inter", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --display: "Bricolage Grotesque", "Inter Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-photo: 18px;
   --wrap: 1180px;
   --gutter: clamp(16px, 4vw, 40px);
 }
@@ -502,7 +504,7 @@ label.check, .field label.check { font-weight: 400; font-size: .95rem; display: 
    The public site reads like a printed photo book of the neighbourhood:
    full-bleed photographs, mounted prints with captions underneath, a title page
    laid over the cover photo, and project pages told as chapters. */
-:root { --caption: "Newsreader", "Iowan Old Style", Georgia, serif; }
+:root { --caption: var(--font); }
 
 .cover { position: relative; background: #fff; }
 .cover__photo { height: clamp(300px, 62vh, 640px); overflow: hidden; background: var(--ink); }
@@ -858,3 +860,184 @@ textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, mo
 .pay-url { display: block; word-break: break-all; background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: .85rem; }
 .pay-forget { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
 .pay-forget input { flex: 1 1 160px; padding: 6px 10px; }
+
+/* ============================================================ MODERN LAYER (v6)
+   Clean and airy: white and kerb-grey surfaces, signal-blue actions, rounded photography,
+   Bricolage Grotesque headings with Instrument Sans text. Hi-vis yellow is kept for one job:
+   showing how far a street's funding has got, drawn like a road marking. */
+
+body { font-size: 17px; line-height: 1.62; font-variation-settings: normal; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+h1, h2, h3, h4 { font-family: var(--display); font-variation-settings: normal; font-weight: 700; letter-spacing: -0.025em; line-height: 1.04; text-wrap: balance; }
+h1 { font-size: clamp(2.5rem, 5.6vw, 4.6rem); font-weight: 750; }
+h2 { font-size: clamp(1.9rem, 3.4vw, 2.8rem); }
+h3 { font-size: 1.25rem; letter-spacing: -0.015em; line-height: 1.2; font-variation-settings: normal; }
+.lede { font-size: 1.16rem; line-height: 1.6; color: var(--ink-2); }
+a { color: var(--royal); }
+a:hover { color: var(--royal-hover); }
+::selection { background: var(--hivis); color: var(--ink); }
+
+.section { padding: clamp(64px, 9vw, 120px) 0; }
+.section-head { margin-bottom: 40px; align-items: flex-end; }
+.section-head h2 { margin: 0; max-width: 20ch; }
+.section-head p { font-size: 1.02rem; }
+
+/* buttons: confident, quiet */
+.btn { font-weight: 600; padding: 15px 26px; letter-spacing: -0.005em; border-width: 1.5px; }
+.btn--sm { padding: 10px 18px; }
+.btn--primary { background: var(--royal); box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 6px 16px -8px rgba(31,91,224,.7); }
+.btn--ghost { border-color: #c9cede; color: var(--ink); background: #fff; }
+.btn--ghost:hover { border-color: var(--ink); background: #fff; color: var(--ink); }
+.btn--hivis { box-shadow: 0 6px 16px -10px rgba(0,0,0,.5); }
+.btn--link { padding-inline: 6px; }
+
+/* header */
+.site-header { background: rgba(255,255,255,.86); backdrop-filter: saturate(1.6) blur(14px); border-bottom: 1px solid rgba(228,231,236,.9); }
+.site-header .wrap { min-height: 72px; }
+.brand img { width: 44px; }
+.brand-word b { font-family: var(--display); letter-spacing: .02em; font-weight: 800; font-variation-settings: normal; font-size: 1.05rem; }
+.brand-word span { letter-spacing: .3em; font-variation-settings: normal; font-size: .82rem; font-weight: 600; }
+.nav a { font-weight: 500; color: var(--ink-2); padding: 9px 14px; }
+.nav a:hover { background: var(--paving); color: var(--ink); }
+.nav a[aria-current="page"] { background: transparent; color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); border-radius: 0; }
+@media (max-width: 900px) { .nav a[aria-current="page"] { box-shadow: none; font-weight: 700; } }
+.demo-banner { font-size: .82rem; }
+.announce { font-size: .88rem; font-weight: 500; }
+
+/* the signature: funding drawn as a road marking */
+.tape { height: 12px; border-radius: 999px; background: #e9ecf1; }
+.tape__fill { border-radius: 999px; border-right: 0; background-color: var(--hivis);
+  background-image: repeating-linear-gradient(90deg, rgba(24,33,77,.55) 0 10px, transparent 10px 20px);
+  background-size: 100% 2px; background-position: 0 50%; background-repeat: no-repeat; }
+.tape--thin { height: 8px; }
+.tape--thin .tape__fill { background-image: none; }
+.tape-divider { height: 6px; background: var(--hivis); background-image: repeating-linear-gradient(90deg, var(--ink) 0 22px, transparent 22px 40px); background-size: 100% 2px; background-position: 0 50%; background-repeat: no-repeat; }
+.phases { gap: 6px; }
+.phase { font-size: .8rem; font-weight: 500; }
+.phase::before { height: 8px; border-radius: 999px; background: #e9ecf1; }
+.phase.is-done::before { background: var(--hivis); background-image: none; }
+.phase.is-current::before { background: var(--royal); box-shadow: none; }
+.phase.is-current { font-weight: 700; }
+
+/* homepage hero */
+.hero2 { padding: clamp(32px, 5vw, 64px) 0 clamp(40px, 6vw, 80px); }
+.hero2__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
+.hero2__text h1 { max-width: 12ch; margin-bottom: .4em; }
+.hero2__text .lede { max-width: 46ch; }
+.hero2__text .hero__ctas { margin: 30px 0 26px; }
+.hero2__about { display: inline-block; margin-top: 22px; font-weight: 600; color: var(--ink); }
+.hero2__media { position: relative; }
+.hero2__media > img { width: 100%; aspect-ratio: 5 / 6; object-fit: cover; object-position: 50% 45%; border-radius: 28px; background: var(--paving); }
+.hero2__live { position: absolute; left: clamp(-56px, -4vw, -16px); bottom: 28px; width: min(340px, 82%); display: grid; gap: 8px;
+  background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-radius: var(--r-lg); padding: 18px 20px; text-decoration: none; color: var(--ink);
+  box-shadow: 0 30px 60px -28px rgba(24,33,77,.55), 0 0 0 1px rgba(24,33,77,.06); }
+.hero2__live:hover { color: var(--ink); box-shadow: 0 30px 60px -24px rgba(24,33,77,.6), 0 0 0 1px rgba(24,33,77,.14); }
+.hero2__live-label { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 600; color: var(--leaf); }
+.hero2__live-label::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 0 4px var(--leaf-bg); }
+@media (max-width: 900px) {
+  .hero2__grid { grid-template-columns: 1fr; }
+  .hero2__media > img { aspect-ratio: 4 / 3; border-radius: 22px; }
+  .hero2__live { position: relative; left: auto; bottom: auto; width: auto; margin: -56px 14px 0; }
+}
+.promises { gap: 10px 24px; font-size: .92rem; }
+.promises svg { color: var(--leaf); }
+
+/* numbers strip */
+.tally { border: 0; background: var(--paving); }
+.tally .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding-top: 30px; padding-bottom: 30px; }
+.tally p { display: flex; flex-direction: column; gap: 2px; font-size: .9rem; padding-right: 16px; }
+.tally p + p { padding-left: 24px; border-left: 1px solid var(--line); }
+.tally b { font-family: var(--display); font-size: clamp(1.6rem, 2.6vw, 2.1rem); font-weight: 700; letter-spacing: -0.02em; font-variation-settings: normal; }
+@media (max-width: 760px) { .tally .wrap { grid-template-columns: 1fr 1fr; row-gap: 20px; } .tally p:nth-child(3) { padding-left: 0; border-left: 0; } }
+
+/* steps: a real sequence, so numbered */
+.steps { border-top: 0; gap: 16px; }
+.steps li, .steps li + li { padding: 26px 24px 24px; border: 0; background: var(--paving); border-radius: var(--r-lg); }
+.steps li::before { background: var(--hivis); color: var(--ink); font-family: var(--display); width: 40px; height: 40px; }
+.section--paving .steps li { background: #fff; }
+@media (max-width: 520px) { .steps li, .steps li + li { border-top: 0; padding: 22px; } }
+.promise-band { background: var(--leaf-bg); border-radius: var(--r-lg); padding: 22px 26px; }
+
+/* project cards */
+.albums { gap: 48px 28px; }
+.album__photo { border-radius: var(--r-photo); aspect-ratio: 4 / 4.4; margin-bottom: 10px; }
+.album__photo .pill { left: 14px; top: 14px; backdrop-filter: blur(6px); background: rgba(255,255,255,.92); box-shadow: none; }
+.album__where { font-style: normal; font-size: .9rem; }
+.album__title { font-family: var(--display); font-weight: 700; font-size: 1.28rem; letter-spacing: -0.02em; font-variation-settings: normal; }
+.album:hover .album__title { text-decoration: none; color: var(--royal); }
+.album__nums { font-size: .88rem; }
+.album__deadline { font-size: .82rem; }
+
+/* photography */
+.plate img, .storyline__step .plate img, .chapter__plates .plate img { border-radius: var(--r-photo); }
+.plate figcaption { font-style: normal; font-size: .93rem; padding-top: 12px; }
+.mission figure.plate img, .mission img { border-radius: 24px; }
+.mission blockquote, .quote-band blockquote { font-family: var(--display); font-style: normal; font-weight: 600; letter-spacing: -0.02em; }
+.filmstrip button { border-radius: var(--r-photo); }
+.filmstrip__title { font-size: clamp(1.6rem, 2.6vw, 2.1rem); }
+.filmstrip-section { background: #fff; }
+.gallery figure { border-radius: var(--r-photo); }
+.lightbox { background: rgba(12,16,38,.92); backdrop-filter: blur(6px); }
+.lightbox img { border-radius: 14px; }
+.yt { border-radius: 22px; }
+
+/* page headers: white, generous */
+.page-head { background: #fff; border-bottom: 0; padding: clamp(48px, 7vw, 96px) 0 clamp(24px, 3vw, 40px); }
+.page-head h1 { font-size: clamp(2.4rem, 5vw, 4rem); max-width: 16ch; }
+.page-head .lede { font-size: 1.2rem; }
+.crumbs { font-size: .85rem; }
+
+/* project page */
+.cover__photo--project { height: clamp(260px, 52vh, 560px); margin: 0 var(--gutter); border-radius: 28px; max-width: calc(var(--wrap) + 160px); margin-inline: auto; width: calc(100% - 2 * var(--gutter)); }
+.titlepage__card::before, .cover__title::before { display: none; }
+.titlepage__card { border-radius: 24px 24px 0 0; padding-left: clamp(20px, 4vw, 44px); margin-top: clamp(-110px, -8vw, -40px); }
+.titlepage--plain { background: #fff; border-bottom: 0; }
+.titlepage--plain .titlepage__card { padding-left: 0; }
+.titlepage__where { font-style: normal; font-size: 1.05rem; }
+.chapter { border-top: 0; padding-top: 12px; }
+.chapter__title { font-family: var(--display); }
+.chapter__title::before { width: 28px; height: 6px; border-radius: 999px; background: var(--hivis); background-image: none; }
+.note__when { font-style: normal; font-size: .88rem; }
+.panel { border: 0; background: var(--paving); border-radius: var(--r-lg); }
+.proj-aside .panel:first-child { background: #fff; box-shadow: 0 24px 50px -30px rgba(24,33,77,.45), 0 0 0 1px var(--line); }
+.raised { font-family: var(--display); font-weight: 700; letter-spacing: -0.02em; font-variation-settings: normal; }
+.amounts span { border-width: 1.5px; border-radius: 12px; }
+.deadline-box { border-radius: 12px; background: #eaf0fd; }
+
+/* pills */
+.pill { font-weight: 600; font-size: .76rem; padding: 4px 10px; }
+
+/* sponsors */
+.sponsor, .sponsor-card { border: 0; background: var(--paving); border-radius: var(--r-lg); }
+.sponsor-card:hover, .sponsor:hover { background: #eceef2; }
+.sponsor-card__logo { background: #fff; border-radius: 12px; }
+.sponsor--join { background: #fff; border: 1.5px dashed #c9cede; }
+.vmv__tag { text-transform: none; letter-spacing: 0; font-size: .85rem; border-radius: 999px; padding: 4px 12px; }
+.vmv > div, .local-why > div, .values h3 { border-top-width: 2px; }
+.supporters__list a { border: 0; background: var(--paving); }
+
+/* CTA band and footer */
+.cta-band { background: var(--ink); border-radius: 0; }
+.cta-band .tape-divider { display: none; }
+.cta-band .wrap { padding-top: clamp(56px, 7vw, 88px); padding-bottom: clamp(56px, 7vw, 88px); }
+.cta-band h2 { font-size: clamp(2rem, 3.6vw, 3rem); }
+.site-footer { background: #121a3f; }
+.site-footer h4 { font-family: var(--font); font-size: .9rem; font-weight: 600; color: #fff; letter-spacing: 0; }
+.site-footer .wrap { padding-top: 64px; }
+
+/* forms */
+input[type=text], input[type=email], input[type=tel], input[type=number], input[type=password], input[type=date], select, textarea {
+  border-radius: 12px; border: 1.5px solid #d6dae3; }
+input:focus, select:focus, textarea:focus { border-color: var(--royal); box-shadow: 0 0 0 4px rgba(31,91,224,.14); outline: none; }
+
+/* empty states */
+.empty { border: 0; background: var(--paving); border-radius: var(--r-lg); }
+
+/* admin keeps the same family */
+.acard { border-radius: var(--r-lg); border-color: var(--line); }
+.acard > h2, .acard > h3 { font-family: var(--display); }
+.admin-top h1 { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+.kpi b { font-family: var(--display); font-variation-settings: normal; }
+.section--paving .sponsor, #sponsors .sponsor { background: #fff; }
+.section--paving .sponsor-card, .section--paving .empty, .section--paving .panel { background: #fff; }
+.cover__photo--project { margin-top: clamp(12px, 2vw, 24px); }
+.sponsor-card .sponsor-card__meta span { background: #fff; }

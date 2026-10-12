@@ -5,10 +5,7 @@
   <div><h1>Page content</h1><p class="muted" style="margin:4px 0 0">Change any wording or picture on these pages. Leave a heading or title empty to hide it.</p></div>
   <a class="btn btn--ghost btn--sm" href="{{ url_for(spec.endpoint) }}" target="_blank">View {{ spec.label|lower }}</a>
 </div>
-<nav class="tabs" aria-label="Pages" style="margin-bottom:18px">
-  {% for key, pg in pages.items() %}<a href="{{ url_for('admin.page_content', page=key) }}"{% if key == page %} aria-current="page"{% endif %}>{{ pg.label }}</a>{% endfor %}
-  <a href="{{ url_for('admin.story') }}">About photo story</a>
-</nav>
+{% include "admin/_content_tabs.html" %}
 <form method="post" enctype="multipart/form-data" class="content-form">
   <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
   {% for title, fields in spec.sections %}

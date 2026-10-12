@@ -1,0 +1,18 @@
+<div class="content-fields">
+  <div class="field full"><label for="b-h">Heading</label><input id="b-h" type="text" name="heading" maxlength="160" value="{{ b.heading if b else '' }}" placeholder="e.g. Our safety standards"></div>
+  <div class="field full"><label for="b-t">Text <span class="muted small">(leave a blank line between paragraphs)</span></label><textarea id="b-t" name="body" rows="6" maxlength="4000">{{ b.body if b else '' }}</textarea></div>
+  <div class="field"><label for="b-i">Picture <span class="muted small">(optional)</span></label>
+    {% if b and b.image %}<img src="{{ b.image|photo_url }}" alt="" style="width:160px;aspect-ratio:4/3;object-fit:cover;border-radius:6px;margin-bottom:8px">{% endif %}
+    <input id="b-i" type="file" name="image" accept="image/*">
+    {% if b and b.image %}<label class="check small" style="margin-top:8px"><input type="checkbox" name="remove_image" value="1"> <span>Remove the picture</span></label>{% endif %}
+  </div>
+  <div class="field"><span class="label">Picture on the</span>
+    <div class="radio-row" style="grid-template-columns:auto auto;justify-content:start;gap:16px">
+      <label class="check small"><input type="radio" name="image_side" value="left"{% if not b or b.image_side != 'right' %} checked{% endif %}> <span>Left</span></label>
+      <label class="check small"><input type="radio" name="image_side" value="right"{% if b and b.image_side == 'right' %} checked{% endif %}> <span>Right</span></label>
+    </div>
+    <label class="check small" style="margin-top:10px"><input type="checkbox" name="shaded" value="1"{% if b and b.shaded %} checked{% endif %}> <span>Grey background</span></label>
+  </div>
+  <div class="field"><label for="b-bt">Button text <span class="muted small">(optional)</span></label><input id="b-bt" type="text" name="button_text" maxlength="60" value="{{ b.button_text if b else '' }}" placeholder="e.g. Request a clean"></div>
+  <div class="field"><label for="b-bu">Button link</label><input id="b-bu" type="text" inputmode="url" name="button_url" maxlength="300" value="{{ b.button_url if b else '' }}" placeholder="/request or https://…"></div>
+</div>

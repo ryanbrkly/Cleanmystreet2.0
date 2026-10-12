@@ -1018,3 +1018,98 @@ def page_content(page):
 def _drop_content_image(old, new=None):
     if old and old != new and not str(old).startswith("static:"):
         delete_upload(old)
+
+
+# ---------------------------------------------------------------- About page layout: show, hide, order, add blocks
+
+
+@bp.route("/about-layout", methods=["GET", "POST"])
+@login_required
+def about_layout():
+    from . import content
+    if request.method == "POST":
+        f = request.form
+        action = f.get("action", "save")
+        if action == "add_block":
+            bid = _save_block(None, f)
+            if bid:
+                log_activity("about_block_added", str(bid))
+                flash("Block added at the bottom of the page. Move it where you want it.", "success")
+            return redirect(url_for("admin.about_layout") + "#layout")
+        items = content.about_layout()
+        keyed = []
+        for i, item in enumerate(items):
+            item["on"] = bool(f.get(f"on_{item['id']}"))
+            try:
+                pos = float(f.get(f"pos_{item['id']}") or i + 1)
+            except ValueError:
+                pos = i + 1
+            keyed.append((pos, i, item))
+        keyed.sort(key=lambda k: (k[0], k[1]))
+        items = [k[2] for k in keyed]
+        how, _, target = f.get("move", "").partition("|")
+        ids = [i["id"] for i in items]
+        if target in ids:
+            i = ids.index(target)
+            item = items.pop(i)
+            items.insert(max(0, i - 1) if how == "up" else min(len(items), i + 1), item)
+        content.save_layout(items)
+        shown = [k for k, _ in content.STATS if f.get(f"stat_{k}")]
+        execute("INSERT INTO page_content(key, value, updated_at) VALUES ('about.stats_show', ?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                (",".join(shown), now_iso()))
+        log_activity("about_layout_saved")
+        flash("Layout saved.", "success")
+        return redirect(url_for("admin.about_layout") + "#layout")
+    return render_template("admin/about_layout.html", layout=content.about_layout(), stats=content.STATS,
+                           stats_shown=content.stats_shown())
+
+
+def _save_block(block, f):
+    heading = clean_text(f.get("heading"), 160)
+    body = clean_text(f.get("body"), 4000, multiline=True)
+    if not heading and not body:
+        flash("Give the block a heading or some text.", "error")
+        return None
+    image = block["image"] if block else None
+    if request.files.get("image") and request.files["image"].filename:
+        try:
+            new = save_image(request.files["image"], prefix="page")
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return None
+        if image:
+            delete_upload(image)
+        image = new
+    if f.get("remove_image") and image:
+        delete_upload(image)
+        image = None
+    data = (heading, body, image, "right" if f.get("image_side") == "right" else "left",
+            1 if f.get("shaded") else 0, clean_text(f.get("button_text"), 60), safe_url(f.get("button_url"), allow_relative=True))
+    if block:
+        execute("UPDATE page_blocks SET heading=?, body=?, image=?, image_side=?, shaded=?, button_text=?, button_url=? "
+                "WHERE id=?", data + (block["id"],))
+        return block["id"]
+    return execute("INSERT INTO page_blocks(page, heading, body, image, image_side, shaded, button_text, button_url) "
+                   "VALUES ('about',?,?,?,?,?,?,?)", data)
+
+
+@bp.route("/about-layout/block/<int:bid>", methods=["GET", "POST"])
+@login_required
+def about_block(bid):
+    block = query("SELECT * FROM page_blocks WHERE id=?", (bid,), one=True)
+    if not block:
+        abort(404)
+    if request.method == "POST":
+        if request.form.get("action") == "delete":
+            delete_upload(block["image"])
+            execute("DELETE FROM page_blocks WHERE id=?", (bid,))
+            log_activity("about_block_deleted", str(bid))
+            flash("Block removed from the About page.", "success")
+            return redirect(url_for("admin.about_layout") + "#layout")
+        if _save_block(block, request.form):
+            log_activity("about_block_saved", str(bid))
+            flash("Block saved.", "success")
+            return redirect(url_for("admin.about_layout") + "#layout")
+        return redirect(url_for("admin.about_block", bid=bid))
+    return render_template("admin/about_block.html", b=block)

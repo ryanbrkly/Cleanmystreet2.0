@@ -24,7 +24,7 @@
     <a class="navlink" href="{{ url_for('admin.projects_list') }}"{% if ep.startswith('admin.project') %} aria-current="page"{% endif %}>Projects</a>
     <a class="navlink" href="{{ url_for('admin.payments_ledger') }}"{% if ep == 'admin.payments_ledger' %} aria-current="page"{% endif %}>Payments {% if nav_counts.refunds_pending %}<span class="badge">{{ nav_counts.refunds_pending }}</span>{% endif %}</a>
     <a class="navlink" href="{{ url_for('admin.sponsors') }}"{% if ep == 'admin.sponsors' %} aria-current="page"{% endif %}>Sponsors</a>
-    <a class="navlink" href="{{ url_for('admin.page_content', page='about') }}"{% if ep in ('admin.page_content', 'admin.story') %} aria-current="page"{% endif %}>Page content</a>
+    <a class="navlink" href="{{ url_for('admin.page_content', page='about') }}"{% if ep in ('admin.page_content', 'admin.story', 'admin.about_layout', 'admin.about_block') %} aria-current="page"{% endif %}>Page content</a>
     <a class="navlink" href="{{ url_for('admin.emails_list') }}"{% if ep.startswith('admin.email') %} aria-current="page"{% endif %}>Emails</a>
     <a class="navlink" href="{{ url_for('admin.settings_page') }}"{% if ep == 'admin.settings_page' %} aria-current="page"{% endif %}>Site settings</a>
     <div class="spacer"></div>

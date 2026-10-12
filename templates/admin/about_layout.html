@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% set title = 'About page blocks' %}
+{% block main %}
+<div class="admin-top">
+  <div><h1>Page content</h1><p class="muted" style="margin:4px 0 0">Choose which blocks appear on the About page and in what order, or add your own.</p></div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}" target="_blank">View about page</a>
+</div>
+{% include "admin/_content_tabs.html" %}
+
+<section class="acard" id="layout">
+  <h2>Blocks on the About page</h2>
+  <p class="tiny muted" style="margin-top:-8px">The heading and introduction at the top always show. Untick a block to hide it. Change wording under “About wording”.</p>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save">
+    <ol class="layout-list">
+      {% for item in layout %}
+      <li class="{{ 'is-off' if not item.on }}">
+        <span class="layout-list__num">{{ loop.index }}</span>
+        <label class="check"><input type="checkbox" name="on_{{ item.id }}" value="1"{% if item.on %} checked{% endif %}> <span><b>{{ item.label }}</b>{% if item.block %} <span class="tiny muted">your block</span>{% endif %}</span></label>
+        <div class="layout-list__tools">
+          <label class="small">Position <input class="pos" type="number" name="pos_{{ item.id }}" value="{{ loop.index }}" min="1" max="{{ layout|length }}"></label>
+          <button class="btn btn--ghost btn--sm" type="submit" name="move" value="up|{{ item.id }}"{% if loop.first %} disabled{% endif %} aria-label="Move {{ item.label }} up">↑</button>
+          <button class="btn btn--ghost btn--sm" type="submit" name="move" value="down|{{ item.id }}"{% if loop.last %} disabled{% endif %} aria-label="Move {{ item.label }} down">↓</button>
+          {% if item.block %}<a class="btn btn--ghost btn--sm" href="{{ url_for('admin.about_block', bid=item.block.id) }}">Edit</a>
+          {% elif item.id == 'story' %}<a class="small" href="{{ url_for('admin.story') }}">Photos</a>
+          {% else %}<a class="small" href="{{ url_for('admin.page_content', page='about') }}">Wording</a>{% endif %}
+        </div>
+        {% if item.id == 'stats' %}
+        <div class="layout-list__sub">
+          <span class="small">Numbers to show:</span>
+          {% for key, label in stats %}<label class="check small"><input type="checkbox" name="stat_{{ key }}" value="1"{% if key in stats_shown %} checked{% endif %}> <span>{{ label }}</span></label>{% endfor %}
+          <span class="tiny muted">The figures themselves are set in <a href="{{ url_for('admin.settings_page') }}#numbers">Site settings</a>.</span>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    <div class="story-save"><button class="btn btn--primary" type="submit">Save layout</button><span class="tiny muted">To jump a block, change its position number and save.</span></div>
+  </form>
+</section>
+
+<section class="acard" id="add">
+  <h2>Add a block</h2>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_block">
+    {% set b = None %}
+    {% include "admin/_block_fields.html" %}
+    <button class="btn btn--primary" type="submit" style="margin-top:14px">Add block</button>
+  </form>
+</section>
+{% endblock %}

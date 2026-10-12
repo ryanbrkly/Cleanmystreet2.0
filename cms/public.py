@@ -139,7 +139,9 @@ def about():
         story = query("SELECT * FROM story_photos ORDER BY sort_order, id")
     except Exception:  # noqa: BLE001 - table appears after the next start
         story = []
-    return render_template("pages/about.html", stats=public_stats(), story=story)
+    from . import content
+    return render_template("pages/about.html", stats=public_stats(), story=story,
+                           layout=content.about_layout(), stats_shown=content.stats_shown())
 
 
 @bp.route("/sponsors")

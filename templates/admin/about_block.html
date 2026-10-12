@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% set title = 'Edit block' %}
+{% block main %}
+<div class="admin-top">
+  <div><div class="crumbs"><a href="{{ url_for('admin.about_layout') }}">About blocks</a> / Edit</div><h1>{{ b.heading or 'Untitled block' }}</h1></div>
+  <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}" target="_blank">View about page</a>
+</div>
+<section class="acard">
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="save">
+    {% include "admin/_block_fields.html" %}
+    <button class="btn btn--primary" type="submit" style="margin-top:14px">Save block</button>
+  </form>
+</section>
+<form method="post" data-confirm="Remove this block from the About page?">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete">
+  <button class="link-btn small danger" type="submit">Remove this block</button>
+</form>
+{% endblock %}

@@ -64,6 +64,7 @@ PAGES = {
             ("Photo story", [
                 ("about.story_heading", "Heading", T, "How a street gets done"),
                 ("about.story_intro", "Introduction", T, "From cones going up to the final sweep. Tap any photo to see it full size."),
+                ("about.home_button", "Button on the homepage that links to the photo story", T, "See how a street gets done"),
             ]),
             ("Why a clean community matters", [
                 ("about.why_heading", "Heading", T, "Why a clean community matters"),
@@ -91,6 +92,13 @@ PAGES = {
                 ("Transparent", "Every rand is shown on the project page, held for that street only, with photos of the work."),
                 ("Fair", "If a street doesn’t reach its goal by the deadline, everyone is refunded in full."),
             ])),
+            ("Numbers", [
+                ("about.stats_heading", "Heading (optional)", T, ""),
+                ("about.stat_streets", "Label: streets cleaned", T, "streets cleaned"),
+                ("about.stat_raised", "Label: money raised", T, "raised by neighbours"),
+                ("about.stat_contributors", "Label: people who chipped in", T, "people have chipped in"),
+                ("about.stat_active", "Label: streets raising funds", T, "streets raising funds now"),
+            ]),
             ("Where we work", [
                 ("about.where_heading", "Heading", T, "Where we work"),
                 ("about.where_text", "Text ({areas} is replaced by the service areas in Site settings)", A,
@@ -177,7 +185,7 @@ def all_values():
         values = {k: d for k, (_l, _k, d) in FIELDS.items()}
         try:
             for row in query("SELECT key, value FROM page_content"):
-                if row["key"] in values:
+                if row["key"] in values or row["key"] in ("about.layout", "about.stats_show"):
                     values[row["key"]] = row["value"]
         except Exception:  # noqa: BLE001 - table appears after the next start
             pass
@@ -219,3 +227,77 @@ def paragraphs(text):
 
 def lines(text):
     return [ln.strip() for ln in str(text or "").splitlines() if ln.strip()]
+
+
+# ---------------------------------------------------------------- About page layout (blocks)
+
+import json  # noqa: E402
+
+ABOUT_BLOCKS = [
+    ("intro", "Getting to know us"),
+    ("vmv", "Vision, mission and values"),
+    ("story", "Photo story"),
+    ("why", "Why a clean community matters"),
+    ("quote", "Quote"),
+    ("green", "Going green and how we work"),
+    ("where", "Where we work"),
+    ("stats", "Numbers (streets cleaned, money raised…)"),
+]
+STATS = [
+    ("streets", "Streets cleaned"),
+    ("raised", "Money raised"),
+    ("contributors", "People who chipped in"),
+    ("active", "Streets raising funds now"),
+]
+
+
+def custom_blocks(page="about"):
+    try:
+        return {r["id"]: dict(r) for r in query("SELECT * FROM page_blocks WHERE page=? ORDER BY id", (page,))}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def about_layout():
+    """Ordered blocks for the About page: [{id, label, on, block?}]. Saved as JSON in page_content."""
+    names = dict(ABOUT_BLOCKS)
+    blocks = custom_blocks()
+    try:
+        saved = json.loads(all_values().get("about.layout") or "[]")
+    except ValueError:
+        saved = []
+    out, seen = [], set()
+    for item in saved if isinstance(saved, list) else []:
+        bid = str(item.get("id", ""))
+        if bid in seen:
+            continue
+        if bid in names:
+            out.append({"id": bid, "label": names[bid], "on": bool(item.get("on", True))})
+        elif bid.startswith("block:") and bid[6:].isdigit() and int(bid[6:]) in blocks:
+            b = blocks[int(bid[6:])]
+            out.append({"id": bid, "label": b["heading"] or "Untitled block", "on": bool(item.get("on", True)), "block": b})
+        else:
+            continue
+        seen.add(bid)
+    for bid, label in ABOUT_BLOCKS:  # new built-in blocks appear switched on
+        if bid not in seen:
+            out.append({"id": bid, "label": label, "on": True})
+    for b in blocks.values():  # blocks never placed yet go at the end
+        bid = f"block:{b['id']}"
+        if bid not in seen:
+            out.append({"id": bid, "label": b["heading"] or "Untitled block", "on": True, "block": b})
+    return out
+
+
+def save_layout(items):
+    value = json.dumps([{"id": i["id"], "on": bool(i["on"])} for i in items])
+    execute("INSERT INTO page_content(key, value, updated_at) VALUES ('about.layout', ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at", (value, now_iso()))
+    g.pop("page_content", None)
+
+
+def stats_shown():
+    raw = all_values().get("about.stats_show")
+    if raw is None:
+        return [k for k, _ in STATS]
+    return [k for k in raw.split(",") if k in dict(STATS)]

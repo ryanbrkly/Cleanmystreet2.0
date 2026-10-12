@@ -2,15 +2,11 @@
 {% set title = 'About page story' %}
 {% block main %}
 <div class="admin-top">
-  <div><h1>About page photo story</h1><p class="muted" style="margin:4px 0 0">Photos shown in order on the About page under “How a street gets done”, each with a short note underneath. Visitors can tap any photo to see it full size.</p></div>
+  <div><h1>About page photo story</h1><p class="muted" style="margin:4px 0 0">Photos shown in order on the About page, each with a short note underneath. The heading above them is changed under Page content → About page → Photo story. Visitors can tap any photo to see it full size.</p></div>
   <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story" target="_blank">View on the website</a>
 </div>
 
-<nav class="tabs" aria-label="Pages" style="margin-bottom:18px">
-  <a href="{{ url_for('admin.page_content', page='about') }}">About page</a>
-  <a href="{{ url_for('admin.page_content', page='sponsors') }}">Sponsors page</a>
-  <a href="{{ url_for('admin.story') }}" aria-current="page">About photo story</a>
-</nav>
+{% include "admin/_content_tabs.html" %}
 <section class="acard">
   <h2>Add photos</h2>
   <form method="post" enctype="multipart/form-data" class="story-upload">

@@ -228,11 +228,16 @@ def clean_text(value, max_len=200, multiline=False):
     return text.strip()[:max_len]
 
 
-def safe_url(url):
-    """Allow only http(s) links; anything else (javascript:, data:) becomes empty."""
+def safe_url(url, allow_relative=False):
+    """Allow only http(s) links; anything else (javascript:, data:) becomes empty.
+
+    With allow_relative, links within this site such as /request or /projects are kept too.
+    """
     url = (url or "").strip()
     if not url:
         return ""
+    if allow_relative and re.match(r"^/(?!/)[^\s\\]*$", url):
+        return url[:300]
     if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d)", url) and not url.lower().startswith(("http://", "https://")):
         return ""  # javascript:, data:, mailto: etc.
     if not url.lower().startswith(("http://", "https://")):

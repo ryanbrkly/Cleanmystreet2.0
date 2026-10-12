@@ -210,3 +210,18 @@ CREATE TABLE IF NOT EXISTS page_content (
     value       TEXT NOT NULL DEFAULT '',
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 )
+;
+
+-- Extra blocks added to the About page in admin (heading, text and an optional picture).
+CREATE TABLE IF NOT EXISTS page_blocks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    page        TEXT NOT NULL DEFAULT 'about',
+    heading     TEXT NOT NULL DEFAULT '',
+    body        TEXT NOT NULL DEFAULT '',
+    image       TEXT,
+    image_side  TEXT NOT NULL DEFAULT 'left',
+    shaded      INTEGER NOT NULL DEFAULT 0,
+    button_text TEXT NOT NULL DEFAULT '',
+    button_url  TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+)

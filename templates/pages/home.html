@@ -95,7 +95,7 @@
     </ul>
     <div class="filmstrip__foot">
       <p class="filmstrip__hint">Tap any photo to see it full size.</p>
-      <a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story">See how a street gets done</a>
+      {% if c('about.home_button') %}<a class="btn btn--ghost btn--sm" href="{{ url_for('public.about') }}#story">{{ c('about.home_button') }}</a>{% endif %}
     </div>
   </div>
 </section>

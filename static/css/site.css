@@ -762,3 +762,8 @@ textarea.code { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, mo
 .story-save { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; position: sticky; bottom: 0; background: #fff; padding: 12px 0; }
 .link-btn.danger { color: var(--danger); }
 @media (max-width: 640px) { .story-admin li { grid-template-columns: 28px minmax(0, 1fr); } .story-admin img { grid-column: 2; width: 100%; } .story-admin__body { grid-column: 2; } }
+/* admin: numbers on the website */
+.radio-row { display: grid; gap: 10px; margin-bottom: 14px; }
+.stats-table input { width: 100%; max-width: 140px; padding: 8px 10px; }
+.stats-table td { vertical-align: middle; }
+.sample-note { margin-top: 14px; padding: 12px 14px; background: #fff6d6; border-radius: var(--r-sm); display: grid; gap: 10px; justify-items: start; }

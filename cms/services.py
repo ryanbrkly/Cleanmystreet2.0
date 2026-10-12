@@ -86,19 +86,38 @@ def unique_slug(base):
     return slug
 
 
-def public_stats():
-    """Live numbers for the homepage — computed, never hard-coded."""
-    s = get_settings()
-    streets = query("SELECT COUNT(*) AS n FROM projects WHERE status='completed'", one=True)["n"]
-    raised = query("SELECT COALESCE(SUM(amount_cents),0) AS n FROM contributions WHERE status='paid'", one=True)["n"]
-    backers = query("SELECT COUNT(DISTINCT lower(email)) AS n FROM contributions WHERE status='paid'", one=True)["n"]
-    active = query("SELECT COUNT(*) AS n FROM projects WHERE status='funding'", one=True)["n"]
+def live_stats():
+    """Totals worked out from the projects and payments on this site."""
     return {
-        "streets": streets + int(s.get("legacy_streets") or 0),
-        "raised_cents": raised + int(s.get("legacy_raised_cents") or 0),
-        "contributors": backers + int(s.get("legacy_contributors") or 0),
-        "active": active,
+        "streets": query("SELECT COUNT(*) AS n FROM projects WHERE status='completed'", one=True)["n"],
+        "raised_cents": query("SELECT COALESCE(SUM(amount_cents),0) AS n FROM contributions WHERE status='paid'",
+                              one=True)["n"],
+        "contributors": query("SELECT COUNT(DISTINCT lower(email)) AS n FROM contributions WHERE status='paid'",
+                              one=True)["n"],
+        "active": query("SELECT COUNT(*) AS n FROM projects WHERE status='funding'", one=True)["n"],
     }
+
+
+def _int(value):
+    try:
+        return max(0, int(float(str(value or 0).strip() or 0)))
+    except ValueError:
+        return 0
+
+
+def public_stats():
+    """Numbers shown on the homepage and About page.
+
+    "add" (default): live totals plus the work done before the platform, from Site settings.
+    "exact": show the Site settings figures as they are.
+    """
+    s = get_settings()
+    live = live_stats()
+    entered = {"streets": _int(s.get("legacy_streets")), "raised_cents": _int(s.get("legacy_raised_cents")),
+               "contributors": _int(s.get("legacy_contributors"))}
+    if s.get("stats_mode") == "exact":
+        return dict(entered, active=live["active"])
+    return {k: live[k] + entered[k] for k in entered} | {"active": live["active"]}
 
 
 def create_project_from_request(req, quote, *, service_type, goal_cents, budget_cents,

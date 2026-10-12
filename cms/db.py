@@ -34,6 +34,7 @@ DEFAULT_SETTINGS = {
     "announcement": "",
     "service_areas": "Johannesburg, Pretoria, Cape Town, Durban",
     "admin_notify_email": "",
+    "stats_mode": "add",
 }
 
 

@@ -553,18 +553,79 @@ def settings_page():
         if video and not youtube_id(video):
             flash("The homepage video must be a YouTube link.", "error")
             return redirect(url_for("admin.settings_page"))
+        if f.get("action") == "remove_samples":
+            n = remove_sample_data()
+            log_activity("sample_data_removed", str(n))
+            flash(f"Sample data removed ({n} items). The homepage numbers now come from your real projects only.",
+                  "success")
+            return redirect(url_for("admin.settings_page") + "#numbers")
         for key in ("hero_video_url", "video_heading", "video_caption", "contact_email", "contact_phone",
-                    "whatsapp_number", "announcement", "service_areas", "default_funding_days",
-                    "legacy_streets", "legacy_contributors"):
+                    "whatsapp_number", "announcement", "service_areas", "default_funding_days"):
             if key in f:
                 set_setting(key, f.get(key, "").strip())
-        set_setting("default_min_contribution_cents", str(parse_rand(f.get("default_min_contribution"), 5000)))
-        set_setting("legacy_raised_cents", str(parse_rand(f.get("legacy_raised"), 0)))
+        for key in ("legacy_streets", "legacy_contributors"):
+            if key in f:
+                digits = "".join(ch for ch in f.get(key, "") if ch.isdigit())[:9]
+                set_setting(key, str(int(digits or 0)))
+        if "stats_mode" in f:
+            set_setting("stats_mode", "exact" if f.get("stats_mode") == "exact" else "add")
+        if "default_min_contribution" in f:
+            set_setting("default_min_contribution_cents", str(parse_rand(f.get("default_min_contribution"), 5000)))
+        if "legacy_raised" in f:
+            set_setting("legacy_raised_cents", str(max(0, parse_rand(f.get("legacy_raised"), 0))))
         log_activity("settings_saved")
         flash("Settings saved.", "success")
         return redirect(url_for("admin.settings_page"))
-    return render_template("admin/settings.html", s=get_settings(),
+    from .services import live_stats, public_stats
+    return render_template("admin/settings.html", s=get_settings(), live=live_stats(), shown=public_stats(),
+                           samples=count_sample_data(),
                            video_id=youtube_id(get_settings().get("hero_video_url")))
+
+
+SAMPLE_EMAIL = "demo%@example.com"
+
+
+def count_sample_data():
+    try:
+        return (query("SELECT COUNT(*) n FROM requests WHERE email LIKE ?", (SAMPLE_EMAIL,), one=True)["n"]
+                + query("SELECT COUNT(*) n FROM sponsors WHERE name LIKE '%(sample)'", one=True)["n"])
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def remove_sample_data():
+    """Delete the demo requests, projects, contributions and sponsors added by the sample seed."""
+    removed = 0
+    reqs = query("SELECT id FROM requests WHERE email LIKE ?", (SAMPLE_EMAIL,))
+    req_ids = [r["id"] for r in reqs]
+    projects = []
+    for rid in req_ids:
+        projects += [r["id"] for r in query("SELECT id FROM projects WHERE request_id=?", (rid,))]
+    for pid in projects:
+        real = query("SELECT COUNT(*) n FROM contributions WHERE project_id=? AND email NOT LIKE ? "
+                     "AND status IN ('paid','refund_pending')", (pid, SAMPLE_EMAIL), one=True)["n"]
+        if real:
+            continue  # a real person paid into it: keep the project
+        for u in query("SELECT image FROM updates WHERE project_id=?", (pid,)):
+            delete_upload(u["image"])
+        execute("UPDATE requests SET project_id=NULL WHERE project_id=?", (pid,))
+        execute("UPDATE projects SET parent_id=NULL WHERE parent_id=?", (pid,))
+        for table in ("contributions", "updates", "project_sponsors"):
+            execute(f"DELETE FROM {table} WHERE project_id=?", (pid,))
+        execute("DELETE FROM projects WHERE id=?", (pid,))
+        removed += 1
+    for rid in req_ids:
+        if query("SELECT 1 FROM projects WHERE request_id=?", (rid,), one=True):
+            continue
+        execute("DELETE FROM quotes WHERE request_id=?", (rid,))
+        execute("DELETE FROM requests WHERE id=?", (rid,))
+        removed += 1
+    for sp in query("SELECT * FROM sponsors WHERE name LIKE '%(sample)'"):
+        delete_upload(sp["logo"])
+        execute("DELETE FROM project_sponsors WHERE sponsor_id=?", (sp["id"],))
+        execute("DELETE FROM sponsors WHERE id=?", (sp["id"],))
+        removed += 1
+    return removed
 
 
 # ---------------------------------------------------------------- payments ledger

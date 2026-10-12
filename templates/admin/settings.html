@@ -34,15 +34,35 @@
       <div class="field" style="margin-bottom:10px"><label for="wa">WhatsApp number</label><input id="wa" type="tel" name="whatsapp_number" value="{{ s.whatsapp_number }}" placeholder="+27 82 000 0000"></div>
       <div class="field"><label for="sa">Service areas</label><input id="sa" type="text" name="service_areas" value="{{ s.service_areas }}"></div>
     </section>
-    <section class="acard">
-      <h2>Work done before this platform</h2>
-      <p class="small muted">Added to the live totals on the homepage. Only enter figures you can back up.</p>
-      <div class="field" style="margin-bottom:10px"><label for="ls">Streets cleaned</label><input id="ls" type="number" min="0" name="legacy_streets" value="{{ s.legacy_streets }}"></div>
-      <div class="field" style="margin-bottom:10px"><label for="lr">Rand raised</label><input id="lr" type="text" inputmode="decimal" name="legacy_raised" value="{{ (s.legacy_raised_cents|int / 100)|int }}"></div>
-      <div class="field"><label for="lc">Contributors</label><input id="lc" type="number" min="0" name="legacy_contributors" value="{{ s.legacy_contributors }}"></div>
+    <section class="acard" id="numbers">
+      <h2>Numbers on the website</h2>
+      <p class="small muted" style="margin-top:-6px">Shown in the strip under the homepage photo and on the About page.</p>
+      <div class="radio-row">
+        <label class="check"><input type="radio" name="stats_mode" value="add"{% if s.stats_mode != 'exact' %} checked{% endif %}> <span><b>Live totals plus earlier work</b><br><span class="tiny muted">Counts from projects on this site, plus the figures below for work done before it.</span></span></label>
+        <label class="check"><input type="radio" name="stats_mode" value="exact"{% if s.stats_mode == 'exact' %} checked{% endif %}> <span><b>Show exactly these figures</b><br><span class="tiny muted">Ignores the live counts. Use this to set the numbers yourself.</span></span></label>
+      </div>
+      <table class="data stats-table">
+        <thead><tr><th></th><th>Your figure</th><th class="num">Live from site</th><th class="num">Shown now</th></tr></thead>
+        <tbody>
+          <tr><td><label for="ls">Streets cleaned</label></td><td><input id="ls" type="number" min="0" name="legacy_streets" value="{{ s.legacy_streets or 0 }}"></td><td class="num">{{ live.streets }}</td><td class="num"><b>{{ shown.streets }}</b></td></tr>
+          <tr><td><label for="lr">Rand raised</label></td><td><input id="lr" type="text" inputmode="decimal" name="legacy_raised" value="{{ ((s.legacy_raised_cents or 0)|int / 100)|int }}"></td><td class="num">{{ live.raised_cents|rand }}</td><td class="num"><b>{{ shown.raised_cents|rand }}</b></td></tr>
+          <tr><td><label for="lc">People who chipped in</label></td><td><input id="lc" type="number" min="0" name="legacy_contributors" value="{{ s.legacy_contributors or 0 }}"></td><td class="num">{{ live.contributors }}</td><td class="num"><b>{{ shown.contributors }}</b></td></tr>
+          <tr><td>Streets raising funds</td><td class="tiny muted">Always live</td><td class="num">{{ live.active }}</td><td class="num"><b>{{ shown.active }}</b></td></tr>
+        </tbody>
+      </table>
+      <p class="tiny muted" style="margin:8px 0 0">Only publish figures you can back up. Press “Save settings” at the bottom to apply.</p>
+      {% if samples %}
+      <div class="sample-note">
+        <p class="small" style="margin:0"><b>The live counts include sample data</b> ({{ samples }} demo requests and sponsors that came with the site). Remove it so only real projects count.</p>
+        <button class="btn btn--ghost btn--sm" type="submit" name="action" value="remove_samples" form="remove-samples">Remove sample data</button>
+      </div>
+      {% endif %}
     </section>
   </div>
 </div>
 <button class="btn btn--primary" type="submit">Save settings</button>
+</form>
+<form method="post" id="remove-samples" data-confirm="Delete all sample requests, projects, payments and sponsors? Your real data stays." hidden>
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="remove_samples">
 </form>
 {% endblock %}
